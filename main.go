@@ -25,13 +25,19 @@ func GetFitness(individual []bool) float64 {
 	return float64(weight) / float64(length)
 }
 
-func SinglePointCrossover(a, b []bool) ([]bool, []bool) {
-	half := len(a) / 2
-	t := make([]bool, half)
-	copy(t, a[half:])
-	copy(a[half:], b[half:])
-	copy(b[half:], t)
+func SinglePointCrossover(a, b []bool, point int) ([]bool, []bool) {
+	if point == 0 {
+		return a, b
+	}
+	t := make([]bool, point)
+	copy(t, a[point:])
+	copy(a[point:], b[point:])
+	copy(b[point:], t)
 	return a, b
+}
+
+func Mutate(individual []bool, point int) {
+	individual[point] = !individual[point]
 }
 
 func main() {
@@ -43,10 +49,14 @@ func main() {
 	//	fmt.Println(GetFitness(population[i]))
 	//}
 
+
 	a := []bool{true, true}
 	b := []bool{false, false}
 
-	a, b = SinglePointCrossover(a, b)
+	point := rand.Intn(3)
+	fmt.Println(point)
+
+	a, b = SinglePointCrossover(a, b, point)
 
 	fmt.Println(a)
 	fmt.Println(b)
