@@ -1,8 +1,9 @@
 package main
 
 import (
-	"testing"
+	"fmt"
 	"slices"
+	"testing"
 )
 
 func TestSinglePointCrossover(t *testing.T) {
@@ -17,11 +18,13 @@ func TestSinglePointCrossover(t *testing.T) {
 	}
 
 	for _, in := range tests {
-		got_a, got_b := SinglePointCrossover(in.a, in.b, in.point)
+		t.Run(fmt.Sprintf("Point %d", in.point), func(t *testing.T) {
+			got_a, got_b := SinglePointCrossover(in.a, in.b, in.point)
 
-		if !slices.Equal(got_a, in.want_a) || !slices.Equal(got_b, in.want_b) {
-			t.Errorf("got %v, %v. want %v, %v", got_a, got_b, in.want_a, in.want_b)
-		}
+			if !slices.Equal(got_a, in.want_a) || !slices.Equal(got_b, in.want_b) {
+				t.Errorf("got %v, %v. want %v, %v", got_a, got_b, in.want_a, in.want_b)
+			}
+		})
 
 	}
 

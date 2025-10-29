@@ -41,23 +41,12 @@ func Mutate(individual []bool, point int) {
 }
 
 func main() {
-	//population := MakePopulation(100, 8)
+	population := MakePopulation(100, 30)
 
-	//fmt.Println(population)
+	fmt.Println(population)
 
-	//for i := range(len(population)) {
-	//	fmt.Println(GetFitness(population[i]))
-	//}
+	for i := range(len(population)) {
+		fmt.Println(GetFitness(population[i]))
+	}
 
-
-	a := []bool{true, true}
-	b := []bool{false, false}
-
-	point := rand.Intn(3)
-	fmt.Println(point)
-
-	a, b = SinglePointCrossover(a, b, point)
-
-	fmt.Println(a)
-	fmt.Println(b)
 }
