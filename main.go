@@ -72,10 +72,10 @@ func EvolveGeneration(population [][]bool, tournamentSize int, mutationRate floa
 		} else {
 			child1 = clone(p1)
 			child2 = clone(p2)
-		}
+			Mutate(child1, mutationRate)
+			Mutate(child2, mutationRate)
 
-		Mutate(child1, mutationRate)
-		Mutate(child2, mutationRate)
+		}
 
 		next = append(next, child1)
 		if len(next) < populationSize {
