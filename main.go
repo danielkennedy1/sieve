@@ -37,6 +37,7 @@ func performTournament(population [][]bool, tournamentSize int, numSelected int)
 
 	return selected
 }
+
 func EvolveGeneration(population [][]bool, tournamentSize int, mutationRate float64, crossoverRate float64, elitism int) [][]bool {
 	populationSize := len(population)
 	geneLen := len(population[0])
@@ -111,14 +112,10 @@ func bestFitness(population [][]bool) (float64, int) {
 }
 
 func SinglePointCrossover(a, b []bool, point int) ([]bool, []bool) {
-	if point == 0 {
-		return a, b
-	}
-	t := make([]bool, point)
-	copy(t, a[point:])
-	copy(a[point:], b[point:])
-	copy(b[point:], t)
-	return a, b
+    child1, child2 := clone(a), clone(b)
+    copy(child1[point:], b[point:])
+    copy(child2[point:], a[point:])
+    return child1, child2
 }
 
 func Mutate(individual []bool, rate float64) {
@@ -131,17 +128,17 @@ func Mutate(individual []bool, rate float64) {
 
 func main() {
 
-	populationSize := 100
+	populationSize := 500
 	geneLength := 200
-	tournamentSize := 5
-	crossoverRate := 0.8
-	mutationRate := 0.01
-	elitism := 2
+	tournamentSize := 10
+	crossoverRate := 0.7 // 0.9
+	mutationRate := 0.01 // 0.05
+	elitism := 20 // 40
 	generations := 50
 
 	population := MakePopulation(populationSize, geneLength)
 
-	for generation := 0; generation < generations; generation++ {
+	for generation := range generations {
 		best, _ := bestFitness(population)
 		fmt.Printf("Gen %d | Best fitness: %.4f\n", generation, best)
 		population = EvolveGeneration(population, tournamentSize, mutationRate, crossoverRate, elitism)
@@ -149,6 +146,6 @@ func main() {
 
 	finalBest, index := bestFitness(population)
 	fmt.Printf("Final best fitness: %.4f\n", finalBest)
-	fmt.Println("Best individual:", population[index])
+	fmt.Println("Best individual index:", index)
 
 }
