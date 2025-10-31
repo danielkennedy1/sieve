@@ -60,25 +60,26 @@ func EvolveGeneration(population [][]bool, tournamentSize int, mutationRate floa
 	next := make([][]bool, 0, populationSize)
 	next = append(next, elites...)
 
+	// Crossover and Mutation
 	for len(next) < populationSize {
 		p1 := selected[rand.Intn(len(selected))]
 		p2 := selected[rand.Intn(len(selected))]
 
-		var c1, c2 []bool
+		var child1, child2 []bool
 		if rand.Float64() < crossoverRate {
 			point := rand.Intn(geneLen-1) + 1
-			c1, c2 = SinglePointCrossover(p1, p2, point)
+			child1, child2 = SinglePointCrossover(p1, p2, point)
 		} else {
-			c1 = clone(p1)
-			c2 = clone(p2)
+			child1 = clone(p1)
+			child2 = clone(p2)
 		}
 
-		Mutate(c1, mutationRate)
-		Mutate(c2, mutationRate)
+		Mutate(child1, mutationRate)
+		Mutate(child2, mutationRate)
 
-		next = append(next, c1)
+		next = append(next, child1)
 		if len(next) < populationSize {
-			next = append(next, c2)
+			next = append(next, child2)
 		}
 	}
 
@@ -97,16 +98,16 @@ func GetFitness(individual []bool) float64 {
 }
 
 func bestFitness(population [][]bool) (float64, int) {
-	bestIdx := 0
-	bestFit := GetFitness(population[0])
+	bestIndex := 0
+	bestFitness := GetFitness(population[0])
 	for i := 1; i < len(population); i++ {
 		f := GetFitness(population[i])
-		if f > bestFit {
-			bestFit = f
-			bestIdx = i
+		if f > bestFitness {
+			bestFitness = f
+			bestIndex = i
 		}
 	}
-	return bestFit, bestIdx
+	return bestFitness, bestIndex
 }
 
 func SinglePointCrossover(a, b []bool, point int) ([]bool, []bool) {
@@ -146,8 +147,8 @@ func main() {
 		population = EvolveGeneration(population, tournamentSize, mutationRate, crossoverRate, elitism)
 	}
 
-	finalBest, idx := bestFitness(population)
+	finalBest, index := bestFitness(population)
 	fmt.Printf("Final best fitness: %.4f\n", finalBest)
-	fmt.Println("Best individual:", population[idx])
+	fmt.Println("Best individual:", population[index])
 
 }
