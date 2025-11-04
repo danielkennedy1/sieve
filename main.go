@@ -11,7 +11,7 @@ func MakePopulation(size, geneLength int) [][]bool {
 	for i := range size {
 		population[i] = make([]bool, geneLength)
 		for j := range geneLength {
-			population[i][j] = rand.Intn(2) == 1
+			population[i][j] = false
 		}
 	}
 	return population
@@ -24,7 +24,7 @@ func clone(ind []bool) []bool {
 func performTournament(population [][]bool, tournamentSize int, numSelected int) [][]bool {
 	selected := make([][]bool, numSelected)
 
-	for i := 0; i < numSelected; i++ {
+	for i:= range numSelected {
 		best := population[rand.Intn(len(population))]
 		for j := 1; j < tournamentSize; j++ {
 			competitor := population[rand.Intn(len(population))]
@@ -37,6 +37,7 @@ func performTournament(population [][]bool, tournamentSize int, numSelected int)
 
 	return selected
 }
+
 func EvolveGeneration(population [][]bool, tournamentSize int, mutationRate float64, crossoverRate float64, elitism int) [][]bool {
 	populationSize := len(population)
 	geneLength := len(population[0])
@@ -111,14 +112,10 @@ func GetBestFitness(population [][]bool) (float64, int) {
 }
 
 func SinglePointCrossover(a, b []bool, point int) ([]bool, []bool) {
-	if point == 0 {
-		return a, b
-	}
-	t := make([]bool, point)
-	copy(t, a[point:])
-	copy(a[point:], b[point:])
-	copy(b[point:], t)
-	return a, b
+    child1, child2 := clone(a), clone(b)
+    copy(child1[point:], b[point:])
+    copy(child2[point:], a[point:])
+    return child1, child2
 }
 
 func Mutate(individual []bool, rate float64) {
@@ -139,7 +136,6 @@ func GetMetrics(prevPopulation [][]bool, newPopulation [][]bool) ([]float64, flo
 }
 
 func main() {
-
 	populationSize := 500
 	geneLength := 1000
 	tournamentSize := 10
@@ -153,6 +149,7 @@ func main() {
 
 	population := MakePopulation(populationSize, geneLength)
 	prevPopulation := population
+
 
 	for generation := 0; generation < generations; generation++ {
 		best, _ := GetBestFitness(population)
@@ -173,7 +170,7 @@ func main() {
 
 	finalBest, index := GetBestFitness(population)
 	fmt.Printf("Final best fitness: %.4f\n", finalBest)
-	fmt.Println("Best individual:", population[index])
+	fmt.Println("Best individual index:", index)
 
 	// Charts
 
