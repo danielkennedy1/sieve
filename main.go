@@ -40,7 +40,7 @@ func performTournament(population [][]bool, tournamentSize int, numSelected int)
 
 func EvolveGeneration(population [][]bool, tournamentSize int, mutationRate float64, crossoverRate float64, elitism int) [][]bool {
 	populationSize := len(population)
-	geneLen := len(population[0])
+	geneLength := len(population[0])
 
 	// Elitism
 	indices := make([]int, populationSize)
@@ -58,33 +58,33 @@ func EvolveGeneration(population [][]bool, tournamentSize int, mutationRate floa
 	// Tournament
 	selected := performTournament(population, tournamentSize, populationSize)
 
-	next := make([][]bool, 0, populationSize)
-	next = append(next, elites...)
+	nextGeneration := make([][]bool, 0, populationSize)
+	nextGeneration = append(nextGeneration, elites...)
 
 	// Crossover and Mutation
-	for len(next) < populationSize {
+	for len(nextGeneration) < populationSize {
 		p1 := selected[rand.Intn(len(selected))]
 		p2 := selected[rand.Intn(len(selected))]
 
 		var child1, child2 []bool
 		if rand.Float64() < crossoverRate {
-			point := rand.Intn(geneLen-1) + 1
+			point := rand.Intn(geneLength-1) + 1
 			child1, child2 = SinglePointCrossover(p1, p2, point)
 		} else {
 			child1 = clone(p1)
 			child2 = clone(p2)
+			Mutate(child1, mutationRate)
+			Mutate(child2, mutationRate)
+
 		}
 
-		Mutate(child1, mutationRate)
-		Mutate(child2, mutationRate)
-
-		next = append(next, child1)
-		if len(next) < populationSize {
-			next = append(next, child2)
+		nextGeneration = append(nextGeneration, child1)
+		if len(nextGeneration) < populationSize {
+			nextGeneration = append(nextGeneration, child2)
 		}
 	}
 
-	return next
+	return nextGeneration
 }
 
 func GetFitness(individual []bool) float64 {
@@ -98,7 +98,7 @@ func GetFitness(individual []bool) float64 {
 	return float64(weight) / float64(length)
 }
 
-func bestFitness(population [][]bool) (float64, int) {
+func GetBestFitness(population [][]bool) (float64, int) {
 	bestIndex := 0
 	bestFitness := GetFitness(population[0])
 	for i := 1; i < len(population); i++ {
@@ -126,25 +126,54 @@ func Mutate(individual []bool, rate float64) {
 	}
 }
 
+func GetMetrics(prevPopulation [][]bool, newPopulation [][]bool) ([]float64, float64, float64) {
+
+	fitness := EvaluateFitnessPopulation(newPopulation)
+	diversity := EvaluateDiversityPopulation(newPopulation)
+	improvement := EvaluateImprovementPopulation(prevPopulation, newPopulation)
+
+	return fitness, diversity, improvement
+}
+
 func main() {
 	populationSize := 500
-	geneLength := 200
-	tournamentSize := 5
-	crossoverRate := 0.7 
+	geneLength := 1000
+	tournamentSize := 10
+	crossoverRate := 0.7
 	mutationRate := 0.01
 	elitism := 20
-	generations := 50
+	generations := 10
+	fitnessMetricsList := make([][]float64, 0, generations)
+	diversityMetricsList := make([]float64, 0, generations)
+	improvementMetricsList := make([]float64, 0, generations)
 
 	population := MakePopulation(populationSize, geneLength)
+	prevPopulation := population
 
-	for generation := range generations {
-		best, _ := bestFitness(population)
+
+	for generation := 0; generation < generations; generation++ {
+		best, _ := GetBestFitness(population)
 		fmt.Printf("Gen %d | Best fitness: %.4f\n", generation, best)
-		population = EvolveGeneration(population, tournamentSize, mutationRate, crossoverRate, elitism)
+
+		newPopulation := EvolveGeneration(population, tournamentSize, mutationRate, crossoverRate, elitism)
+
+		fitness, diversity, improvement := GetMetrics(prevPopulation, newPopulation)
+
+		fitnessMetricsList = append(fitnessMetricsList, fitness)
+		diversityMetricsList = append(diversityMetricsList, diversity)
+		improvementMetricsList = append(improvementMetricsList, improvement)
+
+		// Move to next generation
+		prevPopulation = population
+		population = newPopulation
 	}
 
-	finalBest, index := bestFitness(population)
+	finalBest, index := GetBestFitness(population)
 	fmt.Printf("Final best fitness: %.4f\n", finalBest)
 	fmt.Println("Best individual index:", index)
+
+	// Charts
+
+	CreateChart(fitnessMetricsList, diversityMetricsList, improvementMetricsList)
 
 }
