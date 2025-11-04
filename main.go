@@ -3,13 +3,14 @@ package main
 import (
     "fmt"
     
-    "github.com/danielkennedy1/sieve.git/ea"
-    "github.com/danielkennedy1/sieve.git/genomes"
-    "github.com/danielkennedy1/sieve.git/problems/bitstring"
+    "github.com/danielkennedy1/sieve/ea"
+    "github.com/danielkennedy1/sieve/genomes"
+    "github.com/danielkennedy1/sieve/problems/bitstring"
 )
 
+
 func main() {
-    const genomeSize = 50
+    const genomeSize = 200
     
     pop := ea.NewPopulation(
         100,
@@ -25,5 +26,5 @@ func main() {
     pop.Evolve(100)
     
     _, fitness := pop.Best()
-    fmt.Printf("Best fitness: %.0f/%d\n", fitness, genomeSize)
+    fmt.Printf("Best fitness: %.2f\n", fitness)
 }

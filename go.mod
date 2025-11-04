@@ -1,4 +1,4 @@
-module github.com/danielkennedy1/sieve.git
+module github.com/danielkennedy1/sieve
 
 go 1.25.2
 
