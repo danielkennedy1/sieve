@@ -1,6 +1,6 @@
 package genomes
 
-import "math/rand"
+import "math/rand/v2"
 
 type BitString []bool
 
@@ -13,8 +13,8 @@ func NewBitString(length int) BitString {
 }
 
 func SinglePointCrossover(p1, p2 BitString) (BitString, BitString) {
-    point := rand.Intn(len(p1))
-    
+    point := rand.IntN(len(p1))
+
     c1 := make(BitString, len(p1))
     c2 := make(BitString, len(p2))
     
@@ -28,11 +28,8 @@ func SinglePointCrossover(p1, p2 BitString) (BitString, BitString) {
 }
 
 func Mutate(bs BitString) BitString {
-    mutated := make(BitString, len(bs))
-    copy(mutated, bs)
+    bit := rand.IntN(len(bs))
+    bs[bit] = !bs[bit]
     
-    bit := rand.Intn(len(mutated))
-    mutated[bit] = !mutated[bit]
-    
-    return mutated
+    return bs
 }

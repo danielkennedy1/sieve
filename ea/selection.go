@@ -5,7 +5,7 @@ import "math/rand"
 func Tournament(k int) func([]float64, int) []int {
     return func(fitnesses []float64, n int) []int {
         selected := make([]int, n)
-        for i := 0; i < n; i++ {
+		for i := range n {
             best := rand.Intn(len(fitnesses))
             bestFit := fitnesses[best]
             

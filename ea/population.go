@@ -42,7 +42,7 @@ func NewPopulation[G any](
     }
 }
 func (p *Population[G]) Evolve(generations int) {
-    for gen := 0; gen < generations; gen++ {
+	for range generations {
         for i, g := range p.genomes {
             p.fitnesses[i] = p.evaluate(g)
         }
@@ -80,7 +80,7 @@ func (p *Population[G]) getElite() []G {
         indices[i] = i
     }
     
-    for i := 0; i < len(indices); i++ {
+	for i:= range indices {
         for j := i + 1; j < len(indices); j++ {
             if p.fitnesses[indices[j]] > p.fitnesses[indices[i]] {
                 indices[i], indices[j] = indices[j], indices[i]

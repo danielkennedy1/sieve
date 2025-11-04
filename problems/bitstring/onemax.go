@@ -1,6 +1,6 @@
 package bitstring
 
-import "github.com/danielkennedy1/sieve.git/genomes"
+import "github.com/danielkennedy1/sieve/genomes"
 
 func OneMaxFitness(bs genomes.BitString) float64 {
     count := 0
@@ -9,5 +9,5 @@ func OneMaxFitness(bs genomes.BitString) float64 {
             count++
         }
     }
-    return float64(count)
+    return float64(count) / float64(len(bs))
 }
