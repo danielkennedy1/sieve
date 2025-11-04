@@ -6,12 +6,12 @@ import (
 	"sort"
 )
 
-func MakePopulation(size, gene_length int) [][]bool {
+func MakePopulation(size, geneLength int) [][]bool {
 	population := make([][]bool, size)
 	for i := range size {
-		population[i] = make([]bool, gene_length)
-		for j := range gene_length {
-			population[i][j] = rand.Intn(2) == 1
+		population[i] = make([]bool, geneLength)
+		for j := range geneLength {
+			population[i][j] = false
 		}
 	}
 	return population
@@ -24,7 +24,7 @@ func clone(ind []bool) []bool {
 func performTournament(population [][]bool, tournamentSize int, numSelected int) [][]bool {
 	selected := make([][]bool, numSelected)
 
-	for i := 0; i < numSelected; i++ {
+	for i:= range numSelected {
 		best := population[rand.Intn(len(population))]
 		for j := 1; j < tournamentSize; j++ {
 			competitor := population[rand.Intn(len(population))]
@@ -127,13 +127,12 @@ func Mutate(individual []bool, rate float64) {
 }
 
 func main() {
-
 	populationSize := 500
 	geneLength := 200
-	tournamentSize := 10
-	crossoverRate := 0.7 // 0.9
-	mutationRate := 0.01 // 0.05
-	elitism := 20 // 40
+	tournamentSize := 5
+	crossoverRate := 0.7 
+	mutationRate := 0.01
+	elitism := 20
 	generations := 50
 
 	population := MakePopulation(populationSize, geneLength)
