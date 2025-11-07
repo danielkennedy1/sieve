@@ -1,7 +1,7 @@
 package genomes
 
 import (
-	"math/rand"
+	"math/rand/v2"
 )
 
 func createRandomTerminal(variables *[]float64, numVars int, r *rand.Rand) Expression {
@@ -10,7 +10,7 @@ func createRandomTerminal(variables *[]float64, numVars int, r *rand.Rand) Expre
 	} else {
 		return Variable{
 			Variables: variables,
-			Index:     r.Intn(numVars),
+			Index:     r.IntN(numVars),
 		}
 	}
 }
@@ -25,7 +25,7 @@ func createRandomExpression(currentDepth, maxDepth int, variables *[]float64, nu
 
 	if r.Float64() < probNonTerminal {
 		return NonTerminal{
-			Operator: Operator(r.Intn(int(numOperators))),
+			Operator: Operator(r.IntN(int(numOperators))),
 			Left:     createRandomExpression(currentDepth+1, maxDepth, variables, numVars, r),
 			Right:    createRandomExpression(currentDepth+1, maxDepth, variables, numVars, r),
 		}
