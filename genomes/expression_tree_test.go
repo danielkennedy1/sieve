@@ -19,6 +19,7 @@ func TestExpressionTreeSingle(t *testing.T) {
 func TestExpressionTreeParameterized(t *testing.T) {
 	variables := make([]float64, 3)
 
+	// x1 + ( 3 * x2 - x3 / 2 )
 	expr := genomes.NonTerminal{
 		genomes.Add,
 		genomes.Variable{&variables, 0},
@@ -62,11 +63,13 @@ func TestExpressionTreeParameterized(t *testing.T) {
 func TestRandomExpressionTree(t *testing.T) {
 	r := rand.New(rand.NewPCG(0, 0))
 
-	const numVars = 2
-	maxDepth := 3
+	const numVars = 30
+	maxDepth := 20
 	variableValues := make([]float64, numVars)
 
-	expr := genomes.RandomFormula(maxDepth, &variableValues, numVars, r)
+	constants := []float64{0.1, 0.2, 0.3, 0.4}
+
+	expr := genomes.RandomFormula(maxDepth, &variableValues, &constants, numVars, r)
 
 	t.Logf("Generated Expression Tree: %+v\n", expr)
 
