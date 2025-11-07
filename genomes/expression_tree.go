@@ -44,6 +44,9 @@ func (nt NonTerminal) GetValue() float64 {
 	case Multiply:
 		return nt.Left.GetValue() * nt.Right.GetValue()
 	case Divide:
+		if nt.Right.GetValue() == 0 {
+			return 1
+		}
 		return nt.Left.GetValue() / nt.Right.GetValue()
 	default:
 		panic("invalid operator")
