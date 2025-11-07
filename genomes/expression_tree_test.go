@@ -2,9 +2,8 @@ package genomes_test
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
-	"time"
 
 	"github.com/danielkennedy1/sieve/genomes"
 )
@@ -62,8 +61,7 @@ func TestExpressionTreeParameterized(t *testing.T) {
 }
 
 func TestRandomExpressionTree(t *testing.T) {
-	source := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(source)
+	r := rand.New(rand.NewPCG(0, 0))
 
 	const numVars = 30
 	maxDepth := 20

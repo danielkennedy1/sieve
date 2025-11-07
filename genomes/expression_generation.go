@@ -1,16 +1,16 @@
 package genomes
 
 import (
-	"math/rand"
+	"math/rand/v2"
 )
 
 func createRandomTerminal(variables, constants *[]float64, numVars int, r *rand.Rand) Expression {
 	if numVars == 0 || r.Float64() < 0.5 {
-		return Primitive{Value: (*constants)[rand.Intn(len(*constants))]}
+		return Primitive{Value: (*constants)[rand.IntN(len(*constants))]}
 	} else {
 		return Variable{
 			Variables: variables,
-			Index:     r.Intn(numVars),
+			Index:     r.IntN(numVars),
 		}
 	}
 }
@@ -25,7 +25,8 @@ func createRandomExpression(currentDepth, maxDepth int, variables, constants *[]
 
 	if r.Float64() < probNonTerminal {
 		return NonTerminal{
-			Operator: Operator(r.Intn(int(numOperators))),
+
+			Operator: Operator(r.IntN(int(numOperators))),
 			Left:     createRandomExpression(currentDepth+1, maxDepth, variables, constants, numVars, r),
 			Right:    createRandomExpression(currentDepth+1, maxDepth, variables, constants, numVars, r),
 		}
