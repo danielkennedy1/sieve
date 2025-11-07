@@ -2,7 +2,9 @@ package genomes_test
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/danielkennedy1/sieve/genomes"
 )
@@ -38,7 +40,7 @@ func TestExpressionTreeParameterized(t *testing.T) {
 
 	tests := []struct {
 		sample []float64
-		want float64
+		want   float64
 	}{
 		{[]float64{0, 0, 0}, 0},
 		{[]float64{4, 2, 2}, 9},
@@ -56,4 +58,24 @@ func TestExpressionTreeParameterized(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRandomExpressionTree(t *testing.T) {
+	source := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(source)
+
+	const numVars = 2
+	maxDepth := 3
+	variableValues := make([]float64, numVars)
+
+	expr := genomes.RandomFormula(maxDepth, &variableValues, numVars, r)
+
+	t.Logf("Generated Expression Tree: %+v\n", expr)
+
+	variableValues[0] = 5.0
+	variableValues[1] = 2.0
+	t.Logf("Evaluating with x0=%.2f, x1=%.2f\n", variableValues[0], variableValues[1])
+
+	result := expr.GetValue()
+	t.Logf("Result: %f\n\n", result)
 }
