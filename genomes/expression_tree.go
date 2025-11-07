@@ -2,6 +2,7 @@ package genomes
 
 import (
 	"fmt"
+	"math"
 )
 
 type Expression interface {
@@ -34,7 +35,6 @@ type Variable struct {
 	Index     int
 }
 
-// TODO: error handling
 func (nt NonTerminal) GetValue() float64 {
 	switch nt.Operator {
 	case Add:
@@ -44,6 +44,9 @@ func (nt NonTerminal) GetValue() float64 {
 	case Multiply:
 		return nt.Left.GetValue() * nt.Right.GetValue()
 	case Divide:
+		if nt.Right.GetValue() == 0 {
+			return math.MaxFloat64
+		}
 		return nt.Left.GetValue() / nt.Right.GetValue()
 	default:
 		panic("invalid operator")
