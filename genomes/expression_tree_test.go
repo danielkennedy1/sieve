@@ -70,9 +70,21 @@ func TestRandomExpression(t *testing.T) {
 		constants []float64
 		rand      *rand.Rand
 	}{
-		{numVar: 2, maxDepth: 5, varValues: []float64{1, 2}, constants: []float64{0.1, 0.2, 0.3, 0.4}, rand: rand.New(rand.NewPCG(0, 0))},
-		{numVar: 2, maxDepth: 10, varValues: []float64{1, 2}, constants: []float64{0.1, 0.2, 0.3, 0.4}, rand: rand.New(rand.NewPCG(0, 0))},
-		{numVar: 2, maxDepth: 20, varValues: []float64{1, 2}, constants: []float64{0.1, 0.2, 0.3, 0.4}, rand: rand.New(rand.NewPCG(0, 0))},
+		{numVar: 2,
+			maxDepth:  5,
+			varValues: []float64{1, 2},
+			constants: []float64{0.1, 0.2, 0.3, 0.4},
+			rand:      rand.New(rand.NewPCG(0, 0))},
+		{numVar: 2,
+			maxDepth:  10,
+			varValues: []float64{1, 2},
+			constants: []float64{0.1, 0.2, 0.3, 0.4},
+			rand:      rand.New(rand.NewPCG(0, 0))},
+		{numVar: 2,
+			maxDepth:  20,
+			varValues: []float64{1, 2},
+			constants: []float64{0.1, 0.2, 0.3, 0.4},
+			rand:      rand.New(rand.NewPCG(0, 0))},
 	}
 
 	for _, in := range tests {
