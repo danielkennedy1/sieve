@@ -73,12 +73,10 @@ func TestRandomExpressionTree(t *testing.T) {
 
 	expr := genomes.RandomFormula(maxDepth, &variableValues, &constants, numVars, r)
 
-	t.Logf("Generated Expression Tree: %+v\n", expr)
-
 	variableValues[0] = 5.0
 	variableValues[1] = 2.0
-	t.Logf("Evaluating with x0=%.2f, x1=%.2f\n", variableValues[0], variableValues[1])
 
 	result := expr.GetValue()
-	t.Logf("Result: %f\n\n", result)
+
+	t.Logf("Result of random tree: %f", result)
 }
