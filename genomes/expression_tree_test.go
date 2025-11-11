@@ -105,3 +105,15 @@ func TestRandomExpression(t *testing.T) {
 		})
 	}
 }
+
+func TestExpressionCrossover(t *testing.T) {
+	expr1 := genomes.RandomFormula(20, &[]float64{1, 2, 3}, &[]float64{0.1, 0.2, 0.3}, 3, rand.New(rand.NewPCG(0, 1)))
+	expr2 := genomes.RandomFormula(20, &[]float64{1, 2, 3}, &[]float64{0.1, 0.2, 0.3}, 3, rand.New(rand.NewPCG(0, 3)))
+
+	c1, c2 := genomes.Crossover(expr1, expr2, rand.New(rand.NewPCG(2, 0)), 20)
+
+	t.Logf("Parent 1: %s\n", expr1.String())
+	t.Logf("Parent 2: %s\n", expr2.String())
+	t.Logf("Child 1: %s\n", c1.String())
+	t.Logf("Child 2: %s\n", c2.String())
+}

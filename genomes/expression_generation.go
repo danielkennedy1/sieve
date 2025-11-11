@@ -39,5 +39,6 @@ func RandomFormula(maxDepth int, variables, constants *[]float64, numVars int, r
 	if maxDepth <= 0 {
 		return createRandomTerminal(variables, constants, numVars, r)
 	}
+	// TODO: Dont do all at max depth, do a distribution based on totalPop
 	return createRandomExpression(0, maxDepth, variables, constants, numVars, r)
 }
