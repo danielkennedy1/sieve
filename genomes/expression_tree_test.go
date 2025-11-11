@@ -2,9 +2,9 @@ package genomes_test
 
 import (
 	"fmt"
-	"math/rand"
+	"math"
+	"math/rand/v2"
 	"testing"
-	"time"
 
 	"github.com/danielkennedy1/sieve/genomes"
 )
@@ -61,22 +61,47 @@ func TestExpressionTreeParameterized(t *testing.T) {
 	}
 }
 
-func TestRandomExpressionTree(t *testing.T) {
-	source := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(source)
+func TestRandomExpression(t *testing.T) {
 
-	const numVars = 30
-	maxDepth := 20
-	variableValues := make([]float64, numVars)
+	tests := []struct {
+		numVar    int
+		maxDepth  int
+		varValues []float64
+		constants []float64
+		rand      *rand.Rand
+	}{
+		{numVar: 2,
+			maxDepth:  5,
+			varValues: []float64{1, 2},
+			constants: []float64{0.1, 0.2, 0.3, 0.4},
+			rand:      rand.New(rand.NewPCG(0, 0))},
+		{numVar: 2,
+			maxDepth:  10,
+			varValues: []float64{1, 2},
+			constants: []float64{0.1, 0.2, 0.3, 0.4},
+			rand:      rand.New(rand.NewPCG(0, 0))},
+		{numVar: 2,
+			maxDepth:  20,
+			varValues: []float64{1, 2},
+			constants: []float64{0.1, 0.2, 0.3, 0.4},
+			rand:      rand.New(rand.NewPCG(0, 0))},
+	}
 
-	constants := []float64{0.1, 0.2, 0.3, 0.4}
+	for _, in := range tests {
+		t.Run(fmt.Sprintf("Depth: %d", in.maxDepth), func(t *testing.T) {
+			r := in.rand
+			var numVars = in.numVar
+			maxDepth := in.maxDepth
+			variableValues := in.varValues
+			constants := in.constants
 
-	expr := genomes.RandomFormula(maxDepth, &variableValues, &constants, numVars, r)
+			expr := genomes.RandomFormula(maxDepth, &variableValues, &constants, numVars, r)
 
-	variableValues[0] = 5.0
-	variableValues[1] = 2.0
+			result := expr.GetValue()
 
-	result := expr.GetValue()
-
-	t.Logf("Result of random tree: %f", result)
+			if math.IsNaN(result) || math.IsInf(result, 0) || result == math.MaxFloat64 {
+				t.Errorf("Got %f as result which is not expected type", result)
+			}
+		})
+	}
 }
