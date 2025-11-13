@@ -9,6 +9,7 @@ import (
 type Expression interface {
 	GetValue() float64
 	String() string
+	Compare(other Expression) bool
 }
 
 type NonTerminal struct {
@@ -54,6 +55,18 @@ func (nt NonTerminal) GetValue() float64 {
 	}
 }
 
+func (nt NonTerminal) String() string {
+	return fmt.Sprintf("(%s %s %s)", nt.Left.String(), nt.Operator.String(), nt.Right.String())
+}
+
+func (nt NonTerminal) Compare(other Expression) bool {
+	nt2, ok := other.(NonTerminal)
+	if ok {
+		return nt.Operator == nt2.Operator && nt.Left.Compare(nt2.Left) && nt.Right.Compare(nt2.Right)
+	}
+	return false
+}
+
 func (op Operator) String() string {
 	switch op {
 	case Add:
@@ -73,16 +86,20 @@ func (p Primitive) GetValue() float64 {
 	return p.Value
 }
 
-func (v Variable) GetValue() float64 {
-	return (*v.Variables)[v.Index]
-}
-
-func (nt NonTerminal) String() string {
-	return fmt.Sprintf("(%s %s %s)", nt.Left.String(), nt.Operator.String(), nt.Right.String())
-}
-
 func (p Primitive) String() string {
 	return fmt.Sprintf("%.2f", p.Value)
+}
+
+func (p Primitive) Compare(other Expression) bool {
+	p2, ok := other.(Primitive)
+	if ok {
+		return p.Value == p2.Value
+	}
+	return false
+}
+
+func (v Variable) GetValue() float64 {
+	return (*v.Variables)[v.Index]
 }
 
 func (v Variable) String() string {
@@ -223,4 +240,42 @@ func Crossover(p1, p2 Expression, rng *rand.Rand, maxDepth int) (Expression, Exp
 	}
 
 	return child1, child2
+}
+
+func (v Variable) Compare(other Expression) bool {
+	v2, ok := other.(Variable)
+	if ok {
+		return v.Index == v2.Index
+	}
+	return false
+}
+
+func NewMutateExpression(constants []float64) func(e Expression) Expression {
+	var MutateExpression func(e Expression) Expression
+
+	MutateExpression = func(e Expression) Expression {
+		switch x := e.(type) {
+		case Primitive:
+			x.Value = constants[rand.IntN(len(constants))]
+			return x
+		case Variable:
+			x.Index = rand.IntN(len(*x.Variables))
+			return x
+		case NonTerminal:
+			random := rand.Float64()
+			if random < 0.1 { // FIXME: Shouldn't be hardcoded
+				x.Operator = Operator(rand.IntN(int(numOperators)))
+				return x
+			} else if random < 0.55 {
+				x.Left = MutateExpression(x.Left)
+				return x
+			} else {
+				x.Right = MutateExpression(x.Right)
+				return x
+			}
+		default:
+			panic("Unexpected expression type in MutateExpression")
+		}
+	}
+	return MutateExpression
 }

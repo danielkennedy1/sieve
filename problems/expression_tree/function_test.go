@@ -75,7 +75,7 @@ func TestMeanSquaredError(t *testing.T) {
 		{[]float64{0, 3, 1}, 8.5},
 	}
 
-	mse := expression_tree.MeanSquaredError(expr, &variables, &samples)
+	mse := expression_tree.RootMeanSquaredError(expr, &variables, &samples)
 
 	if mse != 0 {
 		t.Errorf("Unexpected MSE, wanted 0, got %f", mse)

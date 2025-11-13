@@ -106,6 +106,37 @@ func TestRandomExpression(t *testing.T) {
 	}
 }
 
+func TestMakeMutateExpression(t *testing.T) {
+	constants := []float64{1.0, 2.0, 3.0, 4.0}
+	variables := []float64{0.1, 0.2, 0.3, 0.4}
+
+	// x0 + ( 3 * x1 - x2 / 2 )
+	expr := genomes.NonTerminal{
+		genomes.Add,
+		genomes.Variable{&variables, 0},
+		genomes.NonTerminal{
+			genomes.Subtract,
+			genomes.NonTerminal{
+				genomes.Multiply,
+				genomes.Primitive{constants[2]},
+				genomes.Variable{&variables, 1},
+			},
+			genomes.NonTerminal{
+				genomes.Divide,
+				genomes.Variable{&variables, 2},
+				genomes.Primitive{constants[1]},
+			},
+		},
+	}
+	MutateExpression := genomes.NewMutateExpression(constants)
+
+	new_expr := MutateExpression(expr)
+
+	if expr.Compare(new_expr) {
+		t.Errorf("Expression did not change: %s == %s", expr, new_expr)
+	}
+}
+
 func TestExpressionCrossover(t *testing.T) {
 	expr1 := genomes.RandomFormula(20, &[]float64{1, 2, 3}, &[]float64{0.1, 0.2, 0.3}, 3, rand.New(rand.NewPCG(0, 1)))
 	expr2 := genomes.RandomFormula(20, &[]float64{1, 2, 3}, &[]float64{0.1, 0.2, 0.3}, 3, rand.New(rand.NewPCG(0, 3)))

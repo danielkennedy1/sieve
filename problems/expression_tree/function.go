@@ -72,35 +72,32 @@ func LoadSamples(reader *csv.Reader) ([]Sample, error) {
 	return samples, nil
 }
 
-func MeanSquaredError(et genomes.Expression, variables *[]float64, samples *[]Sample) float64 {
-	//file, err := os.Open("data.csv")
-	//if err != nil {
-	//	fmt.Println("Error opening file")
-	//	os.Exit(1)
-	//}
-	//defer file.Close()
+//func RootMeanSquaredError(et genomes.Expression, variables *[]float64, samples *[]Sample) float64 {
+//	total_squared_error := 0.0
+//
+//	for i := range *samples {
+//		(*variables) = (*samples)[i].Variables
+//		squared_error := math.Pow((et.GetValue() - (*samples)[i].Output), 2)
+//		total_squared_error += squared_error
+//	}
+//
+//	mean_squared_error := total_squared_error / float64(len(*samples))
+//
+//	return math.Sqrt(mean_squared_error)
+//}
 
-	//reader := csv.NewReader(file)
+func NewRootMeanSquaredError(variables *[]float64, samples *[]Sample) func (e genomes.Expression) float64 {
+	return func(e genomes.Expression) float64 {
+		total_squared_error := 0.0
 
-	//samples, err := LoadSamples(reader)
-	//if err != nil {
-	//	fmt.Println("Input data is not valid")
-	//	os.Exit(1)
-	//}
+		for i := range *samples {
+			(*variables) = (*samples)[i].Variables
+			squared_error := math.Pow((e.GetValue() - (*samples)[i].Output), 2)
+			total_squared_error += squared_error
+		}
 
-	//fmt.Println(samples[0].Variables)
+		mean_squared_error := total_squared_error / float64(len(*samples))
 
-	//constants := []float64{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}
-
-	total_squared_error := 0.0
-
-	for i := range *samples {
-		(*variables) = (*samples)[i].Variables
-		squared_error := math.Pow((et.GetValue() - (*samples)[i].Output), 2)
-		total_squared_error += squared_error
+		return math.Sqrt(mean_squared_error)
 	}
-
-	mean_squared_error := total_squared_error / float64(len(*samples))
-
-	return mean_squared_error
 }

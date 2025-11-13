@@ -27,7 +27,7 @@ func SinglePointCrossover(p1, p2 BitString) (BitString, BitString) {
     return c1, c2
 }
 
-func Mutate(bs BitString) BitString {
+func MutateBitString(bs BitString) BitString {
     bit := rand.IntN(len(bs))
     bs[bit] = !bs[bit]
     
