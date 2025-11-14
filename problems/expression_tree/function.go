@@ -25,31 +25,31 @@ func LoadSamples(reader *csv.Reader) ([]Sample, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading header: %w", err)
 	}
-	
+
 	// Validate header format: y, x0, x1, ..., xn-1
 	if len(header) < 2 || header[0] != "y" {
 		return nil, fmt.Errorf("invalid header: expected 'y' as first column")
 	}
-	
+
 	numVars := len(header) - 1
-	
+
 	var samples []Sample
 	for {
 		row, err := reader.Read()
 		if err != nil {
 			break // io.EOF or actual error
 		}
-		
+
 		if len(row) != len(header) {
 			return nil, fmt.Errorf("row length mismatch: expected %d columns", len(header))
 		}
-		
+
 		// Parse y value
 		y, err := strconv.ParseFloat(row[0], 64)
 		if err != nil {
 			return nil, fmt.Errorf("parsing y value: %w", err)
 		}
-		
+
 		// Parse x values
 		vars := make([]float64, numVars)
 		for i := range numVars {
@@ -58,17 +58,17 @@ func LoadSamples(reader *csv.Reader) ([]Sample, error) {
 				return nil, fmt.Errorf("parsing x%d value: %w", i, err)
 			}
 		}
-		
+
 		samples = append(samples, Sample{
 			Variables: vars,
 			Output:    y,
 		})
 	}
-	
+
 	if len(samples) == 0 {
 		return nil, fmt.Errorf("no samples found in csv")
 	}
-	
+
 	return samples, nil
 }
 
@@ -86,7 +86,7 @@ func LoadSamples(reader *csv.Reader) ([]Sample, error) {
 //	return math.Sqrt(mean_squared_error)
 //}
 
-func NewRootMeanSquaredError(variables *[]float64, samples *[]Sample) func (e genomes.Expression) float64 {
+func NewRootMeanSquaredError(variables *[]float64, samples *[]Sample) func(e genomes.Expression) float64 {
 	return func(e genomes.Expression) float64 {
 		total_squared_error := 0.0
 
@@ -98,6 +98,6 @@ func NewRootMeanSquaredError(variables *[]float64, samples *[]Sample) func (e ge
 
 		mean_squared_error := total_squared_error / float64(len(*samples))
 
-		return math.Sqrt(mean_squared_error)
+		return -math.Sqrt(mean_squared_error)
 	}
 }
