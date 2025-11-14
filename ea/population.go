@@ -1,6 +1,9 @@
 package ea
 
-import "math/rand"
+import (
+	"fmt"
+	"math/rand"
+)
 
 type Population[G any] struct {
     genomes      []G
@@ -42,7 +45,8 @@ func NewPopulation[G any](
     }
 }
 func (p *Population[G]) Evolve(generations int) {
-	for range generations {
+	for generation := range generations {
+		fmt.Printf("Generation %d", generation)
         for i, g := range p.genomes {
             p.fitnesses[i] = p.evaluate(g)
         }

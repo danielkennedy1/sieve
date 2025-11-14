@@ -47,7 +47,7 @@ func (nt NonTerminal) GetValue() float64 {
 		return nt.Left.GetValue() * nt.Right.GetValue()
 	case Divide:
 		if nt.Right.GetValue() == 0 {
-			return math.MaxFloat64
+			return 1
 		}
 		return nt.Left.GetValue() / nt.Right.GetValue()
 	default:
@@ -207,7 +207,13 @@ func pickPath(e Expression, idx int) Path {
 	}
 }
 
-func Crossover(p1, p2 Expression, rng *rand.Rand, maxDepth int) (Expression, Expression) {
+func NewCrossoverExpression(rng *rand.Rand, maxDepth int) func(Expression, Expression) (Expression, Expression) {
+	return func(p1, p2 Expression) (Expression, Expression) {
+		return crossover(p1, p2, rng, maxDepth)
+	}
+}
+
+func crossover(p1, p2 Expression, rng *rand.Rand, maxDepth int) (Expression, Expression) {
 	clone1 := clone(p1)
 	clone2 := clone(p2)
 
@@ -217,8 +223,8 @@ func Crossover(p1, p2 Expression, rng *rand.Rand, maxDepth int) (Expression, Exp
 		return clone1, clone2
 	}
 
-	point1 := rng.IntN(nodes1 - 1)
-	point2 := rng.IntN(nodes2 - 1)
+	point1 := rng.IntN(int(math.Ceil(float64(nodes1) / 3.0)))
+	point2 := rng.IntN(int(math.Ceil(float64(nodes2) / 3.0)))
 	// fmt.Println("Crossover points:", point1, point2)
 	path1 := pickPath(clone1, point1)
 	path2 := pickPath(clone2, point2)

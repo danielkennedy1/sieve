@@ -9,7 +9,6 @@ import (
 	"github.com/danielkennedy1/sieve/problems/expression_tree"
 )
 
-
 func main() {
 	constants := []float64{0.1, 0.2, 0.3, 0.4}
 	variables := []float64{1.0, 2.0, 3.0}
@@ -17,18 +16,18 @@ func main() {
 	// x1 + ( 3 * x2 - x3 / 2 )
 	target := genomes.NonTerminal{
 		Operator: genomes.Add,
-		Left: genomes.Variable{Variables: &variables, Index: 0},
+		Left:     genomes.Variable{Variables: &variables, Index: 0},
 		Right: genomes.NonTerminal{
 			Operator: genomes.Subtract,
 			Left: genomes.NonTerminal{
 				Operator: genomes.Multiply,
-				Left: genomes.Primitive{Value: constants[2]},
-				Right: genomes.Variable{Variables: &variables, Index: 1},
+				Left:     genomes.Primitive{Value: constants[2]},
+				Right:    genomes.Variable{Variables: &variables, Index: 1},
 			},
 			Right: genomes.NonTerminal{
 				Operator: genomes.Divide,
-				Left: genomes.Variable{Variables: &variables, Index: 2},
-				Right: genomes.Primitive{Value: constants[1]},
+				Left:     genomes.Variable{Variables: &variables, Index: 2},
+				Right:    genomes.Primitive{Value: constants[1]},
 			},
 		},
 	}
@@ -45,35 +44,34 @@ func main() {
 					samples,
 					expression_tree.Sample{
 						Variables: []float64{i, j, k},
-						Output: target.GetValue(),
+						Output:    target.GetValue(),
 					},
 				)
 			}
 		}
 	}
 
-    const genomeSize = 200
-
-	const maxDepth = 10
+	const maxDepth = 5
 
 	r := rand.New(rand.NewPCG(42, 42))
 
-	rmseFitness := expression_tree.NewRootMeanSquaredError(&variables, &samples)
-	mutate := genomes.NewMutateExpression(constants)
-    
-    pop := ea.NewPopulation(
-        100, // Population size
-        0.05, // Mutation rate
-        2, // Elite count
-        func() genomes.Expression{return genomes.RandomFormula(maxDepth, &variables, &constants, len(variables), r)},
-		rmseFitness,
-		//genomes.SinglePointCrossover, // TODO:
-        mutate,
-        ea.Tournament(3),
-    )
-    
-    pop.Evolve(100)
-    
-    _, fitness := pop.Best()
-    fmt.Printf("Best fitness: %.2f\n", fitness)
+	pop := ea.NewPopulation(
+		100,  // Population size
+		0.05, // Mutation rate
+		2,    // Elite count
+		func() genomes.Expression {
+			return genomes.RandomFormula(maxDepth, &variables, &constants, len(variables), r)
+		},
+		expression_tree.NewRootMeanSquaredError(&variables, &samples),
+		genomes.NewCrossoverExpression(r, maxDepth),
+		genomes.NewMutateExpression(constants),
+		ea.Tournament(3),
+	)
+
+	fmt.Println("Evolving...")
+
+	pop.Evolve(100)
+
+	_, fitness := pop.Best()
+	fmt.Printf("Best fitness: %.2f\n", fitness)
 }
