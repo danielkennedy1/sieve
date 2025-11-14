@@ -52,25 +52,22 @@ func main() {
 		}
 	}
 
-    const genomeSize = 200
-
-	const maxDepth = 10
+	const maxDepth = 3
 
 	r := rand.New(rand.NewPCG(42, 42))
 
-	rmseFitness := expression_tree.NewRootMeanSquaredError(&variables, &samples)
-	mutate := genomes.NewMutateExpression(constants)
-    
     pop := ea.NewPopulation(
         100, // Population size
         0.05, // Mutation rate
         2, // Elite count
         func() genomes.Expression{return genomes.RandomFormula(maxDepth, &variables, &constants, len(variables), r)},
-		rmseFitness,
-		//genomes.SinglePointCrossover, // TODO:
-        mutate,
+		expression_tree.NewRootMeanSquaredError(&variables, &samples),
+		genomes.NewCrossoverExpression(r, maxDepth),
+        genomes.NewMutateExpression(constants),
         ea.Tournament(3),
     )
+
+	fmt.Println("Evolving...")
     
     pop.Evolve(100)
     
