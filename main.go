@@ -10,10 +10,10 @@ import (
 )
 
 func main() {
-	constants := []float64{0.1, 0.2, 0.3, 0.4}
+	constants := []float64{1.0, 2.0, 3.0}
 	variables := []float64{1.0, 2.0, 3.0}
 
-	// x1 + ( 3 * x2 - x3 / 2 )
+	// x0 + ( 3 * x1 - x2 / 2 )
 	target := genomes.NonTerminal{
 		Operator: genomes.Add,
 		Left:     genomes.Variable{Variables: &variables, Index: 0},
@@ -34,9 +34,9 @@ func main() {
 
 	samples := make([]expression_tree.Sample, 0)
 
-	for i := -6.0; i < 6.0; i += 0.1 {
-		for j := -6.0; j < 6.0; j += 0.1 {
-			for k := -6.0; k < 6.0; k += 0.1 {
+	for i := -6.0; i < 6.0; i += 1 {
+		for j := -6.0; j < 6.0; j += 1 {
+			for k := -6.0; k < 6.0; k += 1 {
 				variables[0] = i
 				variables[1] = j
 				variables[2] = k
@@ -56,9 +56,9 @@ func main() {
 	r := rand.New(rand.NewPCG(42, 42))
 
 	pop := ea.NewPopulation(
-		100,  // Population size
+		500,  // Population size
 		0.05, // Mutation rate
-		2,    // Elite count
+		10,    // Elite count
 		func() genomes.Expression {
 			return genomes.RandomFormula(maxDepth, &variables, &constants, len(variables), r)
 		},
@@ -72,6 +72,7 @@ func main() {
 
 	pop.Evolve(100)
 
-	_, fitness := pop.Best()
+	best, fitness := pop.Best()
 	fmt.Printf("Best fitness: %.2f\n", fitness)
+	fmt.Println("Best: ", best.String())
 }
