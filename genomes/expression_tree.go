@@ -209,11 +209,11 @@ func pickPath(e Expression, idx int) Path {
 
 func NewCrossoverExpression(rng *rand.Rand, maxDepth int) func(Expression, Expression) (Expression, Expression) {
 	return func(p1, p2 Expression) (Expression, Expression) {
-		return crossover(p1, p2, rng, maxDepth)
+		return Crossover(p1, p2, rng, maxDepth)
 	}
 }
 
-func crossover(p1, p2 Expression, rng *rand.Rand, maxDepth int) (Expression, Expression) {
+func Crossover(p1, p2 Expression, rng *rand.Rand, maxDepth int) (Expression, Expression) {
 	clone1 := clone(p1)
 	clone2 := clone(p2)
 
@@ -256,21 +256,21 @@ func (v Variable) Compare(other Expression) bool {
 	return false
 }
 
-func NewMutateExpression(constants []float64) func(e Expression) Expression {
+func NewMutateExpression(constants []float64, rng *rand.Rand) func(e Expression) Expression {
 	var MutateExpression func(e Expression) Expression
 
 	MutateExpression = func(e Expression) Expression {
 		switch x := e.(type) {
 		case Primitive:
-			x.Value = constants[rand.IntN(len(constants))]
+			x.Value = constants[rng.IntN(len(constants))]
 			return x
 		case Variable:
-			x.Index = rand.IntN(len(*x.Variables))
+			x.Index = rng.IntN(len(*x.Variables))
 			return x
 		case NonTerminal:
-			random := rand.Float64()
+			random := rng.Float64()
 			if random < 0.1 { // FIXME: Shouldn't be hardcoded
-				x.Operator = Operator(rand.IntN(int(numOperators)))
+				x.Operator = Operator(rng.IntN(int(numOperators)))
 				return x
 			} else if random < 0.55 {
 				x.Left = MutateExpression(x.Left)

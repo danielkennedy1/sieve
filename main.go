@@ -64,7 +64,7 @@ func main() {
 		},
 		expression_tree.NewRootMeanSquaredError(&variables, &samples),
 		genomes.NewCrossoverExpression(r, maxDepth),
-		genomes.NewMutateExpression(constants),
+		genomes.NewMutateExpression(constants, r),
 		ea.Tournament(3),
 	)
 

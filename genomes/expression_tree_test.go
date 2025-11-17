@@ -128,7 +128,7 @@ func TestMakeMutateExpression(t *testing.T) {
 			},
 		},
 	}
-	MutateExpression := genomes.NewMutateExpression(constants)
+	MutateExpression := genomes.NewMutateExpression(constants, rand.New(rand.NewPCG(0, 0)))
 
 	new_expr := MutateExpression(expr)
 
