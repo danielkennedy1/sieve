@@ -209,11 +209,11 @@ func pickPath(e Expression, idx int) Path {
 
 func NewCrossoverExpression(rng *rand.Rand, maxDepth int) func(Expression, Expression) (Expression, Expression) {
 	return func(p1, p2 Expression) (Expression, Expression) {
-		return crossover(p1, p2, rng, maxDepth)
+		return Crossover(p1, p2, rng, maxDepth)
 	}
 }
 
-func crossover(p1, p2 Expression, rng *rand.Rand, maxDepth int) (Expression, Expression) {
+func Crossover(p1, p2 Expression, rng *rand.Rand, maxDepth int) (Expression, Expression) {
 	clone1 := clone(p1)
 	clone2 := clone(p2)
 

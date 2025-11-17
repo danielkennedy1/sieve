@@ -27,7 +27,6 @@ func TestLoadSamples(t *testing.T) {
 
 	samples, err := expression_tree.LoadSamples(reader)
 
-
 	// Then
 
 	if err != nil {
@@ -52,32 +51,35 @@ func TestMeanSquaredError(t *testing.T) {
 	// x1 + ( 3 * x2 - x3 / 2 )
 	expr := genomes.NonTerminal{
 		Operator: genomes.Add,
-		Left: genomes.Variable{Variables: &variables, Index: 0},
+		Left:     genomes.Variable{Variables: &variables, Index: 0},
 		Right: genomes.NonTerminal{
 			Operator: genomes.Subtract,
 			Left: genomes.NonTerminal{
 				Operator: genomes.Multiply,
-				Left: genomes.Primitive{Value: 3},
-				Right: genomes.Variable{Variables: &variables, Index: 1},
+				Left:     genomes.Primitive{Value: 3},
+				Right:    genomes.Variable{Variables: &variables, Index: 1},
 			},
 			Right: genomes.NonTerminal{
 				Operator: genomes.Divide,
-				Left: genomes.Variable{Variables: &variables, Index: 2},
-				Right: genomes.Primitive{Value: 2},
+				Left:     genomes.Variable{Variables: &variables, Index: 2},
+				Right:    genomes.Primitive{Value: 2},
 			},
 		},
 	}
 
 	samples := []expression_tree.Sample{
 		{[]float64{0, 0, 0}, 0},
-		{[]float64{4, 2, 2}, 9},
+		{[]float64{4, 2, 2}, 10},
 		{[]float64{2, 1, 8}, 1},
 		{[]float64{0, 3, 1}, 8.5},
 	}
 
-	mse := expression_tree.RootMeanSquaredError(expr, &variables, &samples)
+	rmseFunc := expression_tree.NewRootMeanSquaredError(&variables, &samples)
 
-	if mse != 0 {
-		t.Errorf("Unexpected MSE, wanted 0, got %f", mse)
+	got := rmseFunc(expr)
+	want := -0.5
+	if got != want {
+		t.Errorf("Got RMSE %f, want %f", got, want)
 	}
+
 }
