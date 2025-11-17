@@ -256,7 +256,7 @@ func (v Variable) Compare(other Expression) bool {
 	return false
 }
 
-func NewMutateExpression(constants []float64) func(e Expression) Expression {
+func NewMutateExpression(constants []float64, rng *rand.Rand) func(e Expression) Expression {
 	var MutateExpression func(e Expression) Expression
 
 	MutateExpression = func(e Expression) Expression {
