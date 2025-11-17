@@ -12,5 +12,11 @@ import (
 func main() {
 	lectureExampleGrammar := grammar.NewLectureExampleGrammar()
 
-	fmt.Println(genomes.ValidateGrammar(lectureExampleGrammar))
+	genotype := genomes.Genotype{
+		Genes: []uint8{220, 149, 147, 220, 144, 55, 36, 170},
+	}
+
+	str := genotype.MapToGrammar(lectureExampleGrammar)
+
+	fmt.Println(str.String())
 }
