@@ -90,9 +90,9 @@ type Genotype struct {
 	Genes []uint8
 }
 
-func expand(gr Grammar, g Genotype, token string, offset *int, depth int, maxDepth int, maxGenes int) *GrammarNode {
+func expand(gr Grammar, g Genotype, token string, offset *int, maxGenes int) *GrammarNode {
 
-	if depth >= maxDepth || *offset >= maxGenes {
+	if *offset >= maxGenes {
 		return &GrammarNode{
 			token:    token,
 			children: nil,
@@ -115,7 +115,7 @@ func expand(gr Grammar, g Genotype, token string, offset *int, depth int, maxDep
 	production := rule.Productions[g.Genes[(*offset)%len(g.Genes)]%uint8(len(rule.Productions))]
 
 	for _, e := range production.Elements {
-		children = append(children, expand(gr, g, e, offset, depth+1, maxDepth, maxGenes))
+		children = append(children, expand(gr, g, e, offset, maxGenes))
 	}
 
 	return &GrammarNode{
@@ -124,9 +124,9 @@ func expand(gr Grammar, g Genotype, token string, offset *int, depth int, maxDep
 	}
 }
 
-func (g Genotype) MapToGrammar(gr Grammar, maxDepth int, maxGenes int) GrammarNode {
+func (g Genotype) MapToGrammar(gr Grammar, maxGenes int) GrammarNode {
 	offset := -1
-	root := expand(gr, g, gr.Rules[0].Left, &offset, 0, maxDepth, maxGenes)
+	root := expand(gr, g, gr.Rules[0].Left, &offset, maxGenes)
 	return *root
 }
 
@@ -136,13 +136,13 @@ func cloneG(g Genotype) Genotype {
 	return Genotype{Genes: newGenes}
 }
 
-func (g Genotype) CrossoverGenotype(g1, g2 Genotype, rng *rand.Rand) (Genotype, Genotype) {
+func (g Genotype) CrossoverGenotype(g2 Genotype, rng *rand.Rand) (Genotype, Genotype) {
 
-	clone1 := cloneG(g1)
+	clone1 := cloneG(g)
 	clone2 := cloneG(g2)
 
 	if len(clone1.Genes) == 0 || len(clone2.Genes) == 0 {
-		return g1, g2
+		return g, g2
 	}
 
 	crossPoint1 := rng.IntN(len(clone1.Genes))
