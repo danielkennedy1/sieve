@@ -68,7 +68,6 @@ func (gr Grammar) getRule(token string) *Rule {
 }
 
 // FIXME: Currently relies on the assumption that a terminal statement only ever has one element in its productions
-
 type GrammarNode struct {
 	token string
 	children []*GrammarNode
