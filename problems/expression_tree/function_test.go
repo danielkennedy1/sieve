@@ -24,11 +24,9 @@ func TestLoadSamples(t *testing.T) {
 	reader := csv.NewReader(strings.NewReader(csvData))
 
 	// When
-
 	samples, err := expression_tree.LoadSamples(reader)
 
 	// Then
-
 	if err != nil {
 		t.Errorf("Reading samples failed: %s", err)
 	}
