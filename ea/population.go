@@ -46,7 +46,7 @@ func NewPopulation[G any](
 }
 func (p *Population[G]) Evolve(generations int) {
 	for generation := range generations {
-		fmt.Printf("Generation %d", generation)
+		fmt.Printf("Generation %d\n", generation)
         for i, g := range p.genomes {
             p.fitnesses[i] = p.evaluate(g)
         }
