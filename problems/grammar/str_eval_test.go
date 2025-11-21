@@ -10,7 +10,7 @@ func TestRMSEfromGrammar(t *testing.T) {
 	// variables is passed into RMSE to match your existing API,
 	// but the expression string uses x0, x1, x2 ...
 
-	grammar := NewLectureExampleGrammar()
+	grammar := genomes.NewTestLectureExampleGrammar()
 
 	genotype := genomes.Genotype{
 		Genes: []uint8{220, 149, 147, 220, 144, 55, 36, 170},
