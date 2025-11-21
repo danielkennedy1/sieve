@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 
@@ -9,7 +8,7 @@ import (
 
 	//"github.com/danielkennedy1/sieve/ea"
 	//"github.com/danielkennedy1/sieve/genomes"
-	"github.com/danielkennedy1/sieve/problems/grammar"
+	//"github.com/danielkennedy1/sieve/problems/grammar"
 	//"github.com/danielkennedy1/sieve/problems/grammar"
 )
 
