@@ -1,22 +1,18 @@
-package grammar
+package genomes
 
-import (
-	"github.com/danielkennedy1/sieve/genomes"
-)
-
-func NewLectureExampleGrammar() genomes.Grammar {
-	return genomes.Grammar{
-		Rules: []genomes.Rule{
+func NewTestLectureExampleGrammar() Grammar {
+	return Grammar{
+		Rules: []Rule{
 			{
 				Left: "<expr>",
-				Productions: []genomes.Production{
+				Productions: []Production{
 					{Elements: []string{"<expr>", "<op>", "<expr>"}},
 					{Elements: []string{"<var>"}},
 				},
 			},
 			{
 				Left: "<op>",
-				Productions: []genomes.Production{
+				Productions: []Production{
 					{Elements: []string{"+"}},
 					{Elements: []string{"-"}},
 					{Elements: []string{"*"}},
@@ -25,21 +21,21 @@ func NewLectureExampleGrammar() genomes.Grammar {
 			},
 			{
 				Left: "<var>",
-				Productions: []genomes.Production{
+				Productions: []Production{
 					{Elements: []string{"<prc>"}},
 					{Elements: []string{"<input>"}},
 				},
 			},
 			{
 				Left: "<input>",
-				Productions: []genomes.Production{
+				Productions: []Production{
 					{Elements: []string{"a"}},
 					{Elements: []string{"b"}},
 				},
 			},
 			{
 				Left: "<prc>",
-				Productions: []genomes.Production{
+				Productions: []Production{
 					{Elements: []string{"0.0"}},
 					{Elements: []string{"0.1"}},
 					{Elements: []string{"0.2"}},

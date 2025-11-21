@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 
@@ -14,16 +13,6 @@ import (
 )
 
 func main() {
-	//lectureExampleGrammar := grammar.NewLectureExampleGrammar()
-
-	//genotype := genomes.Genotype{
-	//	Genes: []uint8{220, 149, 147, 220, 144, 55, 36, 170},
-	//}
-
-	//str := genotype.MapToGrammar(lectureExampleGrammar)
-
-	//fmt.Println(str.String())
-
 	f, err := os.Open("data/lecture.bnf")
 	if err != nil {
 		fmt.Println("File not found")
@@ -31,9 +20,4 @@ func main() {
 	}
 	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-
-	grammar := grammar.Parse(*scanner)
-
-	fmt.Println(grammar)
 }
