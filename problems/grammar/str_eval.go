@@ -1,7 +1,6 @@
 package grammar
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/danielkennedy1/sieve/genomes"
@@ -13,14 +12,16 @@ type Sample struct {
 	Output    float64
 }
 
-func NewRMSE(samples []Sample, gr genomes.Grammar) func(s string) float64 {
-	return func(exprStr string) float64 {
+func NewRMSE(samples []Sample, gr genomes.Grammar) func(g genomes.Genotype) float64 {
+	return func(g genomes.Genotype) float64 {
 		varMap := genomes.BuildVarMapFromGrammar(gr)
-		fmt.Println("VarMap:", varMap)
+		// fmt.Println("VarMap:", varMap)
+		// TODO: Change that from 1000
+		exprStr := g.MapToGrammar(gr, 1000).String()
 
 		program, err := expr.Compile(exprStr, expr.AllowUndefinedVariables())
 		if err != nil {
-			fmt.Println("Failed to compile")
+			// fmt.Println("Failed to compile")
 			return math.Inf(-1)
 		}
 
@@ -34,7 +35,7 @@ func NewRMSE(samples []Sample, gr genomes.Grammar) func(s string) float64 {
 
 			out, err := expr.Run(program, env)
 			if err != nil {
-				fmt.Println("Failed to run")
+				// fmt.Println("Failed to run")
 				return math.Inf(-1)
 			}
 
