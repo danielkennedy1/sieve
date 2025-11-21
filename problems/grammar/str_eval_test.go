@@ -7,8 +7,6 @@ import (
 )
 
 func TestRMSEfromGrammar(t *testing.T) {
-	// variables is passed into RMSE to match your existing API,
-	// but the expression string uses x0, x1, x2 ...
 
 	grammar := genomes.NewTestLectureExampleGrammar()
 
@@ -25,7 +23,8 @@ func TestRMSEfromGrammar(t *testing.T) {
 		{Variables: []float64{5, 0}, Output: 5.2},
 	}
 
-	got := RMSE(exprStr.String(), grammar, samples)
+	rmseFunc := NewRMSE(samples, grammar)
+	got := rmseFunc(exprStr.String())
 
 	want := 0.0
 
