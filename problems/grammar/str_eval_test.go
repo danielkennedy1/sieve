@@ -14,8 +14,6 @@ func TestRMSEfromGrammar(t *testing.T) {
 		Genes: []uint8{220, 149, 147, 220, 144, 55, 36, 170},
 	}
 	// a + 0.2
-	exprStr := genotype.MapToGrammar(grammar, 1000)
-
 	samples := []Sample{
 		{Variables: []float64{0, 0}, Output: 0.2},
 		{Variables: []float64{4, 0}, Output: 4.2},
@@ -24,7 +22,7 @@ func TestRMSEfromGrammar(t *testing.T) {
 	}
 
 	rmseFunc := NewRMSE(samples, grammar)
-	got := rmseFunc(exprStr.String())
+	got := rmseFunc(genotype)
 
 	want := 0.0
 

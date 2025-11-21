@@ -136,8 +136,13 @@ func cloneG(g Genotype) Genotype {
 	return Genotype{Genes: newGenes}
 }
 
-func (g Genotype) CrossoverGenotype(g2 Genotype, rng *rand.Rand) (Genotype, Genotype) {
+func NewCrossoverGenotype(rng *rand.Rand) func(g1, g2 Genotype) (Genotype, Genotype) {
+	return func(g1, g2 Genotype) (Genotype, Genotype) {
+		return g1.CrossoverGenotype(g2, rng)
+	}
+}
 
+func (g Genotype) CrossoverGenotype(g2 Genotype, rng *rand.Rand) (Genotype, Genotype) {
 	clone1 := cloneG(g)
 	clone2 := cloneG(g2)
 
@@ -148,22 +153,28 @@ func (g Genotype) CrossoverGenotype(g2 Genotype, rng *rand.Rand) (Genotype, Geno
 	crossPoint1 := rng.IntN(len(clone1.Genes))
 	crossPoint2 := rng.IntN(len(clone2.Genes))
 
-	clone1.Genes = append(clone1.Genes[:crossPoint1], clone2.Genes[crossPoint2:]...)
-	clone2.Genes = append(clone2.Genes[:crossPoint2], clone1.Genes[crossPoint1:]...)
+	tail1 := make([]uint8, len(clone1.Genes[crossPoint1:]))
+	copy(tail1, clone1.Genes[crossPoint1:])
+
+	tail2 := make([]uint8, len(clone2.Genes[crossPoint2:]))
+	copy(tail2, clone2.Genes[crossPoint2:])
+
+	clone1.Genes = append(clone1.Genes[:crossPoint1], tail2...)
+	clone2.Genes = append(clone2.Genes[:crossPoint2], tail1...)
 
 	return clone1, clone2
 }
 
-func (g Genotype) MutateGenotype(rng *rand.Rand, mutationRate float64) Genotype {
-	clone := cloneG(g)
-
-	for i := 0; i < len(clone.Genes); i++ {
-		if rng.Float64() < mutationRate {
-			clone.Genes[i] = uint8(rng.IntN(256))
+func NewMutateGenotype(rng *rand.Rand, mutationRate float64) func(g Genotype) Genotype {
+	return func(g Genotype) Genotype {
+		clone := cloneG(g)
+		for i := 0; i < len(clone.Genes); i++ {
+			if rng.Float64() < mutationRate {
+				clone.Genes[i] = uint8(rng.IntN(256))
+			}
 		}
+		return clone
 	}
-
-	return clone
 }
 
 func ExtractInputVariables(gr Grammar) []string {
@@ -193,4 +204,14 @@ func BuildVarMapFromGrammar(gr Grammar) map[string]int {
 		m[name] = i
 	}
 	return m
+}
+
+func NewCreateGenotype(length int, rng *rand.Rand) func() Genotype {
+	return func() Genotype {
+		genes := make([]uint8, length)
+		for i := 0; i < length; i++ {
+			genes[i] = uint8(rng.IntN(256))
+		}
+		return Genotype{Genes: genes}
+	}
 }
