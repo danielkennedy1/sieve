@@ -2,7 +2,6 @@ package genomes
 
 import (
 	"math/rand/v2"
-	"sort"
 	"strings"
 )
 
@@ -163,34 +162,7 @@ func (g Genotype) MutateGenotype(rng *rand.Rand, mutationRate float64) Genotype 
 		}
 	}
 
+	// fmt.Println(clone.Genes)
+
 	return clone
-}
-
-func ExtractInputVariables(gr Grammar) []string {
-	var inputs []string
-
-	for _, rule := range gr.Rules {
-		if rule.Left == "<input>" {
-			for _, prod := range rule.Productions {
-				for _, elem := range prod.Elements {
-					// terminal: not <nonterminal>
-					if elem[0] != '<' {
-						inputs = append(inputs, elem)
-					}
-				}
-			}
-		}
-	}
-	return inputs
-}
-
-func BuildVarMapFromGrammar(gr Grammar) map[string]int {
-	vars := ExtractInputVariables(gr)
-
-	sort.Strings(vars)
-	m := map[string]int{}
-	for i, name := range vars {
-		m[name] = i
-	}
-	return m
 }
