@@ -2,8 +2,9 @@ package ea
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"sync"
+	"time"
 )
 
 type Population[G any] struct {
@@ -46,7 +47,9 @@ func NewPopulation[G any](
 	}
 }
 func (p *Population[G]) Evolve(generations int) {
+	time_list := []time.Duration{}
 	for generation := range generations {
+		start := time.Now()
 		fmt.Printf("Generation %d\n", generation)
 
 		var wg sync.WaitGroup
@@ -60,21 +63,27 @@ func (p *Population[G]) Evolve(generations int) {
 		wg.Wait()
 
 		parentIndices := p.selector(p.fitnesses, len(p.genomes))
-		offspring := make([]G, 0, len(p.genomes))
 
+		offspring := make([]G, len(p.genomes))
 		for i := 0; i < len(parentIndices)-1; i += 2 {
-			idx1, idx2 := parentIndices[i], parentIndices[i+1]
-			c1, c2 := p.crossover(p.genomes[idx1], p.genomes[idx2])
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				idx1, idx2 := parentIndices[idx], parentIndices[idx+1]
+				c1, c2 := p.crossover(p.genomes[idx1], p.genomes[idx2])
 
-			if rand.Float64() < p.mutationRate {
-				c1 = p.mutate(c1)
-			}
-			if rand.Float64() < p.mutationRate {
-				c2 = p.mutate(c2)
-			}
+				if rand.Float64() < p.mutationRate {
+					c1 = p.mutate(c1)
+				}
+				if rand.Float64() < p.mutationRate {
+					c2 = p.mutate(c2)
+				}
 
-			offspring = append(offspring, c1, c2)
+				offspring[idx] = c1
+				offspring[idx+1] = c2
+			}(i)
 		}
+		wg.Wait()
 
 		if p.eliteCount > 0 {
 			elite := p.getElite()
@@ -83,7 +92,17 @@ func (p *Population[G]) Evolve(generations int) {
 		}
 
 		p.genomes = offspring
+
+		elapsed := time.Since(start)
+		time_list = append(time_list, elapsed)
 	}
+	sum := 0 * time.Nanosecond
+	for i := 0; i < len(time_list); i++ {
+		sum += (time_list[i])
+	}
+
+	avg_time := sum / time.Duration(len(time_list))
+	fmt.Printf("Average time: %s\n", avg_time)
 }
 
 func (p *Population[G]) getElite() []G {
