@@ -10,8 +10,6 @@ import (
 	"github.com/danielkennedy1/sieve/ea"
 	"github.com/danielkennedy1/sieve/genomes"
 	"github.com/danielkennedy1/sieve/problems/grammar"
-	// "github.com/danielkennedy1/sieve/problems/grammar"
-	// "github.com/danielkennedy1/sieve/problems/grammar"
 )
 
 func main() {
@@ -29,18 +27,6 @@ func main() {
 		{Variables: []float64{5, 0}, Output: 5.2},
 	}
 
-	// /func NewPopulation[G any](
-	//     size int,
-	//     mutationRate float64,
-	//     eliteCount int,
-	//     create func() G,
-	//     evaluate func(G) float64,
-	//     crossover func(G, G) (G, G),
-	//     mutate func(G) G,
-	//     selector func([]float64, int) []int,
-	// ) *Population[G] {
-	// population for grammar problem
-
 	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
 	g := grammar.Parse(*s)
@@ -56,7 +42,7 @@ func main() {
 		ea.Tournament(25),
 	)
 
-	population.Evolve(20)
+	population.Evolve(500)
 
 	best, fitness := population.Best()
 	fmt.Printf("Best fitness: %.2f\n", fitness)
