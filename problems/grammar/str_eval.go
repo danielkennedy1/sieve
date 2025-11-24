@@ -13,10 +13,17 @@ type Sample struct {
 }
 
 func NewRMSE(samples []Sample, gr genomes.Grammar) func(g genomes.Genotype) float64 {
+	varMap := genomes.BuildVarMapFromGrammar(gr)
+
+	namesByIdx := make([]string, len(varMap))
+	for name, idx := range varMap {
+		namesByIdx[idx] = name
+	}
+
+	n := float64(len(samples))
+
 	return func(g genomes.Genotype) float64 {
-		varMap := genomes.BuildVarMapFromGrammar(gr)
-		// fmt.Println("VarMap:", varMap)
-		// TODO: Change that from 1000
+		// Map genotype to expression
 		exprStr := g.MapToGrammar(gr, 1000).String()
 
 		program, err := expr.Compile(exprStr, expr.AllowUndefinedVariables())
@@ -25,24 +32,29 @@ func NewRMSE(samples []Sample, gr genomes.Grammar) func(g genomes.Genotype) floa
 			return math.Inf(-1)
 		}
 
+		// Per-call env: goroutine-local
+		env := make(map[string]interface{}, len(namesByIdx))
+
 		total := 0.0
-		env := map[string]interface{}{}
 
 		for _, s := range samples {
-			for name, idx := range varMap {
-				env[name] = s.Variables[idx]
+			for i, name := range namesByIdx {
+				env[name] = s.Variables[i]
 			}
 
 			out, err := expr.Run(program, env)
 			if err != nil {
-				// fmt.Println("Failed to run")
 				return math.Inf(-1)
 			}
 
-			diff := out.(float64) - s.Output
+			v, ok := out.(float64)
+			if !ok {
+				return math.Inf(-1)
+			}
+
+			diff := v - s.Output
 			total += diff * diff
 		}
-
-		return -math.Sqrt(total / float64(len(samples)))
+		return -math.Sqrt(total / n)
 	}
 }

@@ -4,13 +4,14 @@ import (
 	"math/rand/v2"
 	"sort"
 	"strings"
+	"time"
 )
 
 type Grammar struct {
-	Rules []Rule
+	Rules   []Rule
+	ruleMap map[string]*Rule
 }
 
-// NOTE: I'm calling Rule Lefts "stem" in some places
 type Rule struct {
 	Left        string
 	Productions []Production
@@ -21,10 +22,7 @@ type Production struct {
 }
 
 func isNonTerminal(element string) bool {
-	if element[0] == '<' && element[len(element)-1] == '>' {
-		return true
-	}
-	return false
+	return len(element) > 0 && element[0] == '<' && element[len(element)-1] == '>'
 }
 
 func ValidateGrammar(g Grammar) bool {
@@ -60,16 +58,25 @@ func ValidateGrammar(g Grammar) bool {
 	return true
 }
 
+func (gr *Grammar) BuildRuleMap() {
+	gr.ruleMap = make(map[string]*Rule, len(gr.Rules))
+	for i := range gr.Rules {
+		gr.ruleMap[gr.Rules[i].Left] = &gr.Rules[i]
+	}
+}
+
 func (gr Grammar) getRule(token string) *Rule {
-	for _, r := range gr.Rules {
-		if r.Left == token {
-			return &r
+	if gr.ruleMap != nil {
+		return gr.ruleMap[token]
+	}
+	for i := range gr.Rules {
+		if gr.Rules[i].Left == token {
+			return &gr.Rules[i]
 		}
 	}
 	return nil
 }
 
-// FIXME: Currently relies on the assumption that a terminal statement only ever has one element in its productions
 type GrammarNode struct {
 	token    string
 	children []*GrammarNode
@@ -79,11 +86,18 @@ func (node GrammarNode) String() string {
 	if node.children == nil {
 		return node.token
 	}
-	var childStrings []string
-	for _, child := range node.children {
-		childStrings = append(childStrings, child.String())
+
+	capacity := len(node.children) * 10
+	var sb strings.Builder
+	sb.Grow(capacity)
+
+	for i, child := range node.children {
+		if i > 0 {
+			sb.WriteByte(' ')
+		}
+		sb.WriteString(child.String())
 	}
-	return strings.Join(childStrings, " ")
+	return sb.String()
 }
 
 type Genotype struct {
@@ -91,7 +105,6 @@ type Genotype struct {
 }
 
 func expand(gr Grammar, g Genotype, token string, offset *int, maxGenes int) *GrammarNode {
-
 	if *offset >= maxGenes {
 		return &GrammarNode{
 			token:    token,
@@ -100,7 +113,6 @@ func expand(gr Grammar, g Genotype, token string, offset *int, maxGenes int) *Gr
 	}
 
 	rule := gr.getRule(token)
-
 	if rule == nil {
 		return &GrammarNode{
 			token:    token,
@@ -108,14 +120,13 @@ func expand(gr Grammar, g Genotype, token string, offset *int, maxGenes int) *Gr
 		}
 	}
 
-	*offset += 1
+	*offset++
 
-	var children []*GrammarNode
+	production := rule.Productions[g.Genes[*offset%len(g.Genes)]%uint8(len(rule.Productions))]
 
-	production := rule.Productions[g.Genes[(*offset)%len(g.Genes)]%uint8(len(rule.Productions))]
-
-	for _, e := range production.Elements {
-		children = append(children, expand(gr, g, e, offset, maxGenes))
+	children := make([]*GrammarNode, len(production.Elements))
+	for i, e := range production.Elements {
+		children[i] = expand(gr, g, e, offset, maxGenes)
 	}
 
 	return &GrammarNode{
@@ -143,12 +154,12 @@ func NewCrossoverGenotype(rng *rand.Rand) func(g1, g2 Genotype) (Genotype, Genot
 }
 
 func (g Genotype) CrossoverGenotype(g2 Genotype, rng *rand.Rand) (Genotype, Genotype) {
-	clone1 := cloneG(g)
-	clone2 := cloneG(g2)
-
-	if len(clone1.Genes) == 0 || len(clone2.Genes) == 0 {
+	if len(g.Genes) == 0 || len(g2.Genes) == 0 {
 		return g, g2
 	}
+
+	clone1 := cloneG(g)
+	clone2 := cloneG(g2)
 
 	crossPoint1 := rng.IntN(len(clone1.Genes))
 	crossPoint2 := rng.IntN(len(clone2.Genes))
@@ -165,8 +176,9 @@ func (g Genotype) CrossoverGenotype(g2 Genotype, rng *rand.Rand) (Genotype, Geno
 	return clone1, clone2
 }
 
-func NewMutateGenotype(rng *rand.Rand, mutationRate float64) func(g Genotype) Genotype {
+func NewMutateGenotype(mutationRate float64) func(g Genotype) Genotype {
 	return func(g Genotype) Genotype {
+		rng := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0))
 		clone := cloneG(g)
 		for i := 0; i < len(clone.Genes); i++ {
 			if rng.Float64() < mutationRate {
@@ -185,7 +197,7 @@ func ExtractInputVariables(gr Grammar) []string {
 			for _, prod := range rule.Productions {
 				for _, elem := range prod.Elements {
 					// terminal: not <nonterminal>
-					if elem[0] != '<' {
+					if len(elem) > 0 && elem[0] != '<' {
 						inputs = append(inputs, elem)
 					}
 				}
@@ -199,7 +211,7 @@ func BuildVarMapFromGrammar(gr Grammar) map[string]int {
 	vars := ExtractInputVariables(gr)
 
 	sort.Strings(vars)
-	m := map[string]int{}
+	m := make(map[string]int, len(vars))
 	for i, name := range vars {
 		m[name] = i
 	}
