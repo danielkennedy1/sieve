@@ -10,8 +10,6 @@ import (
 	"github.com/danielkennedy1/sieve/ea"
 	"github.com/danielkennedy1/sieve/genomes"
 	"github.com/danielkennedy1/sieve/problems/grammar"
-	// "github.com/danielkennedy1/sieve/problems/grammar"
-	// "github.com/danielkennedy1/sieve/problems/grammar"
 )
 
 func main() {
@@ -22,31 +20,66 @@ func main() {
 	}
 	defer f.Close()
 
-	samples := []grammar.Sample{
-		{Variables: []float64{0, 0}, Output: 0.2},
-		{Variables: []float64{4, 0}, Output: 4.2},
-		{Variables: []float64{2, 0}, Output: 2.2},
-		{Variables: []float64{5, 0}, Output: 5.2},
+	variables := []float64{1.0, 2.0, 3.0}
+
+	//
+	target := genomes.NonTerminal{
+		Operator: genomes.Add,
+		Left: genomes.NonTerminal{
+			Operator: genomes.Add,
+			Left: genomes.NonTerminal{
+				Operator: genomes.Multiply,
+				Left: genomes.NonTerminal{
+					Operator: genomes.Multiply,
+					Left:     genomes.Variable{Variables: &variables, Index: 0},
+					Right:    genomes.Variable{Variables: &variables, Index: 0},
+				},
+				Right: genomes.NonTerminal{
+					Operator: genomes.Multiply,
+					Left:     genomes.Variable{Variables: &variables, Index: 0},
+					Right:    genomes.Variable{Variables: &variables, Index: 0},
+				},
+			},
+			Right: genomes.NonTerminal{
+				Operator: genomes.Multiply,
+				Left: genomes.NonTerminal{
+					Operator: genomes.Multiply,
+					Left:     genomes.Variable{Variables: &variables, Index: 0},
+					Right:    genomes.Variable{Variables: &variables, Index: 0},
+				},
+				Right: genomes.Variable{Variables: &variables, Index: 0},
+			},
+		},
+		Right: genomes.NonTerminal{
+			Operator: genomes.Add,
+			Left: genomes.NonTerminal{
+				Operator: genomes.Multiply,
+				Left:     genomes.Variable{Variables: &variables, Index: 0},
+				Right:    genomes.Variable{Variables: &variables, Index: 0},
+			},
+			Right: genomes.Variable{Variables: &variables, Index: 0},
+		},
 	}
 
-	// /func NewPopulation[G any](
-	//     size int,
-	//     mutationRate float64,
-	//     eliteCount int,
-	//     create func() G,
-	//     evaluate func(G) float64,
-	//     crossover func(G, G) (G, G),
-	//     mutate func(G) G,
-	//     selector func([]float64, int) []int,
-	// ) *Population[G] {
-	// population for grammar problem
+	samples := make([]grammar.Sample, 0)
+
+	for i := -100.0; i < 100.0; i += 1 {
+		variables[0] = i
+		samples = append(
+			samples,
+			grammar.Sample{
+				Variables: []float64{i},
+				Output:    target.GetValue(),
+			},
+		)
+	}
 
 	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
 	g := grammar.Parse(*s)
 
 	population := ea.NewPopulation(
-		100,
+		250,
 		0.1,
 		2,
 		genomes.NewCreateGenotype(8, r),
@@ -56,10 +89,9 @@ func main() {
 		ea.Tournament(25),
 	)
 
-	population.Evolve(20)
+	population.Evolve(100)
 
 	best, fitness := population.Best()
 	fmt.Printf("Best fitness: %.2f\n", fitness)
 	fmt.Println("Best: ", best.MapToGrammar(g, 1000))
-
 }

@@ -2,6 +2,7 @@ package ea
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 )
 
@@ -46,10 +47,21 @@ func NewPopulation[G any](
 }
 func (p *Population[G]) Evolve(generations int) {
 	for generation := range generations {
-		fmt.Printf("Generation %d\n", generation)
+		fmt.Printf("Generation %d. ", generation + 1)
         for i, g := range p.genomes {
             p.fitnesses[i] = p.evaluate(g)
         }
+
+		totalFitness := 0.0
+
+		for _, f := range p.fitnesses {
+			if (f != math.Inf(-1) && f != math.Inf(+1) && !math.IsNaN(f)){
+				totalFitness += f
+			}
+		}
+
+		fmt.Printf("\t\tTotal fitness: %0.2f, ", totalFitness)
+		fmt.Printf("\t\t\tAverage fitness: %0.2f\n", totalFitness / float64(len(p.fitnesses)))
         
         parentIndices := p.selector(p.fitnesses, len(p.genomes))
         offspring := make([]G, 0, len(p.genomes))
