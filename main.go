@@ -30,15 +30,16 @@ func main() {
 	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
 	g := grammar.Parse(*s)
+	g.BuildRuleMap()
 
 	population := ea.NewPopulation(
-		100,
+		400,
 		0.1,
 		2,
 		genomes.NewCreateGenotype(8, r),
 		grammar.NewRMSE(samples, g),
 		genomes.NewCrossoverGenotype(r),
-		genomes.NewMutateGenotype(r, 0.1),
+		genomes.NewMutateGenotype(0.1),
 		ea.Tournament(25),
 	)
 
