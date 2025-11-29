@@ -41,13 +41,14 @@ func BenchmarkGrammarEvolveSmall(b *testing.B) {
 		r := rand.New(rand.NewPCG(0, 0))
 
 		pop := NewPopulation(
-			100, // smaller for faster benchmarking
+			100,
 			0.1,
+			0.7,
 			2,
 			genomes.NewCreateGenotype(8, r),
 			grammar.NewRMSE(testSamples, testGrammar),
 			genomes.NewCrossoverGenotype(r),
-			genomes.NewMutateGenotype(0.1),
+			genomes.NewMutateGenotype(r, 0.1),
 			Tournament(25),
 		)
 		pop.Evolve(10) // fewer generations for benchmarking
@@ -62,11 +63,12 @@ func BenchmarkGrammarEvolveFull(b *testing.B) {
 		pop := NewPopulation(
 			500,
 			0.1,
+			0.7,
 			2,
 			genomes.NewCreateGenotype(8, r),
 			grammar.NewRMSE(testSamples, testGrammar),
 			genomes.NewCrossoverGenotype(r),
-			genomes.NewMutateGenotype(0.1),
+			genomes.NewMutateGenotype(r, 0.1),
 			Tournament(25),
 		)
 		pop.Evolve(50) // Use fewer generations than your full 400 for benchmarking
@@ -80,11 +82,12 @@ func BenchmarkGrammarEvaluateAll(b *testing.B) {
 	pop := NewPopulation(
 		500,
 		0.1,
+		0.7,
 		2,
 		genomes.NewCreateGenotype(8, r),
 		grammar.NewRMSE(testSamples, testGrammar),
 		genomes.NewCrossoverGenotype(r),
-		genomes.NewMutateGenotype(0.1),
+		genomes.NewMutateGenotype(r, 0.1),
 		Tournament(25),
 	)
 
@@ -118,11 +121,12 @@ func benchmarkWithPopSize(b *testing.B, popSize int) {
 		pop := NewPopulation(
 			popSize,
 			0.1,
+			0.7,
 			2,
 			genomes.NewCreateGenotype(8, r),
 			grammar.NewRMSE(testSamples, testGrammar),
 			genomes.NewCrossoverGenotype(r),
-			genomes.NewMutateGenotype(0.1),
+			genomes.NewMutateGenotype(r, 0.1),
 			Tournament(25),
 		)
 		pop.Evolve(10)
