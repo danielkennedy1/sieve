@@ -90,14 +90,12 @@ func NewRMSE(samples []Sample, gr genomes.Grammar) func(g genomes.Genotype) floa
 			return math.Inf(-1)
 		}
 
-		// Per-call env: goroutine-local
-		env := make(map[string]interface{}, len(namesByIdx))
-
 		total := 0.0
+		env := map[string]interface{}{}
 
 		for _, s := range samples {
-			for i, name := range namesByIdx {
-				env[name] = s.Variables[i]
+			for name, idx := range varMap {
+				env[name] = s.Variables[idx]
 			}
 
 			out, err := expr.Run(program, env)
@@ -108,12 +106,7 @@ func NewRMSE(samples []Sample, gr genomes.Grammar) func(g genomes.Genotype) floa
 				return math.Inf(-1)
 			}
 
-			v, ok := out.(float64)
-			if !ok {
-				return math.Inf(-1)
-			}
-
-			diff := v - s.Output
+			diff := out.(float64) - s.Output
 			total += diff * diff
 		}
 

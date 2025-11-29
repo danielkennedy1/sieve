@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"os"
-
 	"math/rand/v2"
+	"os"
+	"time"
 
 	"github.com/danielkennedy1/sieve/ea"
 	"github.com/danielkennedy1/sieve/genomes"
@@ -78,7 +78,7 @@ func main() {
 	}
 
 	population := ea.NewPopulation(
-		250,
+		500,
 		0.1,
 		0.7,
 		15,
@@ -89,10 +89,15 @@ func main() {
 		ea.Tournament(7),
 	)
 
+	start := time.Now()
+
 	population.Evolve(100)
+
+	elapsed := time.Since(start)
 
 	best, fitness := population.Best()
 	fmt.Printf("Best fitness: %.2f\n", fitness)
 	fmt.Println("Best: ", best.MapToGrammar(g, 100).String())
+	fmt.Printf("Elapsed time: %s\n", elapsed)
 
 }
