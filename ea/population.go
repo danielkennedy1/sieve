@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
+	"sync"
+	"time"
 )
 
 type Population[G any] struct {
@@ -17,6 +19,7 @@ type Population[G any] struct {
 	crossoverRate float64
 	mutationRate  float64
 	eliteCount    int
+	numWorkers    int
 }
 
 func NewPopulation[G any](
@@ -35,6 +38,8 @@ func NewPopulation[G any](
 		genomes[i] = create()
 	}
 
+	numWorkers := min(size, 8)
+
 	return &Population[G]{
 		genomes:       genomes,
 		fitnesses:     make([]float64, size),
@@ -45,20 +50,92 @@ func NewPopulation[G any](
 		crossoverRate: crossoverRate,
 		mutationRate:  mutationRate,
 		eliteCount:    eliteCount,
+		numWorkers:    numWorkers,
 	}
 }
+
+func (p *Population[G]) evaluateAll() {
+	jobs := make(chan int, len(p.genomes))
+	var wg sync.WaitGroup
+
+	for w := 0; w < p.numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for idx := range jobs {
+				p.fitnesses[idx] = p.evaluate(p.genomes[idx])
+			}
+		}()
+	}
+
+	for i := range p.genomes {
+		jobs <- i
+	}
+	close(jobs)
+
+	wg.Wait()
+}
+
 func (p *Population[G]) Evolve(generations int) {
-	for generation := range generations {
+	timeList := make([]time.Duration, 0, generations)
+
+	for generation := 0; generation < generations; generation++ {
+		start := time.Now()
 		fmt.Printf("Generation %d\n", generation)
-		for i, g := range p.genomes {
-			p.fitnesses[i] = p.evaluate(g)
+
+		p.evaluateAll()
+
+		parentIndices := p.selector(p.fitnesses, len(p.genomes))
+
+		offspring := make([]G, len(p.genomes))
+
+		type job struct {
+			idx  int
+			idx1 int
+			idx2 int
 		}
+
+		jobs := make(chan job, len(parentIndices)/2)
+		var wg sync.WaitGroup
+
+		for w := 0; w < p.numWorkers; w++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				localRng := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), uint64(w)))
+
+				for j := range jobs {
+					c1, c2 := p.crossover(p.genomes[j.idx1], p.genomes[j.idx2])
+
+					if localRng.Float64() < p.mutationRate {
+						c1 = p.mutate(c1)
+					}
+					if localRng.Float64() < p.mutationRate {
+						c2 = p.mutate(c2)
+					}
+
+					offspring[j.idx] = c1
+					offspring[j.idx+1] = c2
+				}
+			}()
+		}
+
+		for i := 0; i < len(parentIndices)-1; i += 2 {
+			jobs <- job{
+				idx:  i,
+				idx1: parentIndices[i],
+				idx2: parentIndices[i+1],
+			}
+		}
+
+		close(jobs)
+		wg.Wait()
 
 		totalFitness := 0.0
 		bestFitness := -math.MaxFloat64
 
 		for _, f := range p.fitnesses {
-			if f != math.Inf(-1) && f != math.Inf(+1) && !math.IsNaN(f) {
+			if !math.IsInf(f, 0) && !math.IsNaN(f) {
 				totalFitness += f
 				if f > bestFitness {
 					bestFitness = f
@@ -69,28 +146,6 @@ func (p *Population[G]) Evolve(generations int) {
 		fmt.Printf("\t\tTotal fitness: %0.2f, ", totalFitness)
 		fmt.Printf("\t\t\tAverage fitness: %0.2f\n", totalFitness/float64(len(p.fitnesses)))
 
-		parentIndices := p.selector(p.fitnesses, len(p.genomes))
-		offspring := make([]G, 0, len(p.genomes))
-
-		for i := 0; i < len(parentIndices)-1; i += 2 {
-			idx1, idx2 := parentIndices[i], parentIndices[i+1]
-
-			c1, c2 := p.genomes[idx1], p.genomes[idx2]
-
-			// apply crossover with probability p.crossoverRate
-			if rand.Float64() < p.crossoverRate {
-				c1, c2 = p.crossover(c1, c2)
-			} else {
-				if rand.Float64() < p.mutationRate {
-					c1 = p.mutate(c1)
-				}
-				if rand.Float64() < p.mutationRate {
-					c2 = p.mutate(c2)
-				}
-			}
-			offspring = append(offspring, c1, c2)
-		}
-
 		if p.eliteCount > 0 {
 			elite := p.getElite()
 			offspring = offspring[:len(offspring)-p.eliteCount]
@@ -98,9 +153,18 @@ func (p *Population[G]) Evolve(generations int) {
 		}
 
 		p.genomes = offspring
+
+		elapsed := time.Since(start)
+		timeList = append(timeList, elapsed)
+	}
+
+	p.evaluateAll()
+
+	var sum time.Duration
+	for _, t := range timeList {
+		sum += t
 	}
 }
-
 func (p *Population[G]) getElite() []G {
 	indices := make([]int, len(p.genomes))
 	for i := range indices {
