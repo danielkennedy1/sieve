@@ -14,7 +14,7 @@ func TestLectureExampleGrammarAndGenome(t *testing.T) {
 	}
 
 	want := "a + 0.2"
-	got := genotype.MapToGrammar(lectureExampleGrammar, 100).String()
+	got := genotype.MapToGrammar(lectureExampleGrammar, 7).String()
 
 	if got != want {
 		t.Errorf("Got unexpected string from grammar. got '%s', want '%s'", got, want)

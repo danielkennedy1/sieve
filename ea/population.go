@@ -2,28 +2,29 @@ package ea
 
 import (
 	"fmt"
-	"math/rand/v2"
 	"sync"
 	"time"
+	"math"
+	"math/rand/v2"
 )
 
 type Population[G any] struct {
 	genomes   []G
 	fitnesses []float64
 
-	evaluate  func(G) float64
-	crossover func(G, G) (G, G)
-	mutate    func(G) G
-	selector  func([]float64, int) []int
-
-	mutationRate float64
-	eliteCount   int
-	numWorkers   int
+	evaluate      func(G) float64
+	crossover     func(G, G) (G, G)
+	mutate        func(G) G
+	selector      func([]float64, int) []int
+	crossoverRate float64
+	mutationRate  float64
+	eliteCount    int
 }
 
 func NewPopulation[G any](
 	size int,
 	mutationRate float64,
+	crossoverRate float64,
 	eliteCount int,
 	create func() G,
 	evaluate func(G) float64,
@@ -45,6 +46,7 @@ func NewPopulation[G any](
 		crossover:    crossover,
 		mutate:       mutate,
 		selector:     selector,
+    crossoverrate: crossoverRate,
 		mutationRate: mutationRate,
 		eliteCount:   eliteCount,
 		numWorkers:   numWorkers,
@@ -125,6 +127,46 @@ func (p *Population[G]) Evolve(generations int) {
 		}
 		close(jobs)
 		wg.Wait()
+		for i, g := range p.genomes {
+			p.fitnesses[i] = p.evaluate(g)
+		}
+
+		totalFitness := 0.0
+		bestFitness := -math.MaxFloat64
+
+		for _, f := range p.fitnesses {
+			if f != math.Inf(-1) && f != math.Inf(+1) && !math.IsNaN(f) {
+				totalFitness += f
+				if f > bestFitness {
+					bestFitness = f
+				}
+			}
+		}
+		fmt.Printf("\t\tBest fitness: %0.2f, ", bestFitness)
+		fmt.Printf("\t\tTotal fitness: %0.2f, ", totalFitness)
+		fmt.Printf("\t\t\tAverage fitness: %0.2f\n", totalFitness/float64(len(p.fitnesses)))
+
+		parentIndices := p.selector(p.fitnesses, len(p.genomes))
+		offspring := make([]G, 0, len(p.genomes))
+
+		for i := 0; i < len(parentIndices)-1; i += 2 {
+			idx1, idx2 := parentIndices[i], parentIndices[i+1]
+
+			c1, c2 := p.genomes[idx1], p.genomes[idx2]
+
+			// apply crossover with probability p.crossoverRate
+			if rand.Float64() < p.crossoverRate {
+				c1, c2 = p.crossover(c1, c2)
+			} else {
+				if rand.Float64() < p.mutationRate {
+					c1 = p.mutate(c1)
+				}
+				if rand.Float64() < p.mutationRate {
+					c2 = p.mutate(c2)
+				}
+			}
+			offspring = append(offspring, c1, c2)
+		}
 
 		if p.eliteCount > 0 {
 			elite := p.getElite()
@@ -153,14 +195,12 @@ func (p *Population[G]) getElite() []G {
 		indices[i] = i
 	}
 
-	for i := 0; i < p.eliteCount; i++ {
-		maxIdx := i
+	for i := range indices {
 		for j := i + 1; j < len(indices); j++ {
-			if p.fitnesses[indices[j]] > p.fitnesses[indices[maxIdx]] {
-				maxIdx = j
+			if p.fitnesses[indices[j]] > p.fitnesses[indices[i]] {
+				indices[i], indices[j] = indices[j], indices[i]
 			}
 		}
-		indices[i], indices[maxIdx] = indices[maxIdx], indices[i]
 	}
 
 	elite := make([]G, p.eliteCount)
@@ -171,15 +211,20 @@ func (p *Population[G]) getElite() []G {
 }
 
 func (p *Population[G]) Best() (G, float64) {
-	bestIdx := 0
-	bestFit := p.fitnesses[0]
+	bestIdx := -1
+	bestFit := -100000000.0
+
+	// fmt.Println(len(p.fitnesses))
 
 	for i, f := range p.fitnesses {
+		fmt.Println("Fitness", i, ":", f)
+		if math.IsInf(f, 0) {
+			continue
+		}
 		if f > bestFit {
 			bestIdx = i
 			bestFit = f
 		}
 	}
-
 	return p.genomes[bestIdx], bestFit
 }
