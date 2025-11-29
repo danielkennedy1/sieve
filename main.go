@@ -22,7 +22,6 @@ func main() {
 
 	variables := []float64{1.0, 2.0, 3.0}
 
-	//
 	target := genomes.NonTerminal{
 		Operator: genomes.Add,
 		Left: genomes.NonTerminal{
@@ -61,22 +60,21 @@ func main() {
 		},
 	}
 
-	samples := make([]grammar.Sample, 0)
-
-	for i := -100.0; i < 100.0; i += 1 {
-		variables[0] = i
-		samples = append(
-			samples,
-			grammar.Sample{
-				Variables: []float64{i},
-				Output:    target.GetValue(),
-			},
-		)
-	}
-
+	fmt.Println(target.String())
 	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
 	g := grammar.Parse(*s)
+
+	targetExpressionString := "(a + (a * a) + (a * a * a)) + (a * a * a * a)"
+	numSamplesToGenerate := 50
+	initialVariables := []float64{0.0}
+
+	samples, err := grammar.GenerateSamples(targetExpressionString, numSamplesToGenerate, initialVariables, g)
+
+	if err != nil {
+		fmt.Printf("Error generating samples: %v\n", err)
+		return
+	}
 
 	population := ea.NewPopulation(
 		250,
@@ -90,7 +88,7 @@ func main() {
 		ea.Tournament(7),
 	)
 
-	population.Evolve(250)
+	population.Evolve(100)
 
 	best, fitness := population.Best()
 	fmt.Printf("Best fitness: %.2f\n", fitness)

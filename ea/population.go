@@ -55,13 +55,17 @@ func (p *Population[G]) Evolve(generations int) {
 		}
 
 		totalFitness := 0.0
+		bestFitness := -math.MaxFloat64
 
 		for _, f := range p.fitnesses {
 			if f != math.Inf(-1) && f != math.Inf(+1) && !math.IsNaN(f) {
 				totalFitness += f
+				if f > bestFitness {
+					bestFitness = f
+				}
 			}
 		}
-
+		fmt.Printf("\t\tBest fitness: %0.2f, ", bestFitness)
 		fmt.Printf("\t\tTotal fitness: %0.2f, ", totalFitness)
 		fmt.Printf("\t\t\tAverage fitness: %0.2f\n", totalFitness/float64(len(p.fitnesses)))
 
