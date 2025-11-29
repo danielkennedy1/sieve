@@ -52,6 +52,17 @@ func (p *Population[G]) Evolve(generations int) {
 		for i, g := range p.Genomes {
 			p.Fitnesses[i] = p.Evaluate(g)
         }
+
+		totalFitness := 0.0
+
+		for _, f := range p.fitnesses {
+			if (f != math.Inf(-1) && f != math.Inf(+1) && !math.IsNaN(f)){
+				totalFitness += f
+			}
+		}
+
+		fmt.Printf("\t\tTotal fitness: %0.2f, ", totalFitness)
+		fmt.Printf("\t\t\tAverage fitness: %0.2f\n", totalFitness / float64(len(p.fitnesses)))
         
 		parentIndices := p.selector(p.Fitnesses, len(p.Genomes))
 		offspring := make([]G, 0, len(p.Genomes))

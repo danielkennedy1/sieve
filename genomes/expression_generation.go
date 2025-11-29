@@ -6,7 +6,7 @@ import (
 
 func createRandomTerminal(variables, constants *[]float64, numVars int, r *rand.Rand) Expression {
 	if numVars == 0 || r.Float64() < 0.5 {
-		return Primitive{Value: (*constants)[rand.IntN(len(*constants))]}
+		return Primitive{Value: (*constants)[r.IntN(len(*constants))]}
 	} else {
 		return Variable{
 			Variables: variables,
