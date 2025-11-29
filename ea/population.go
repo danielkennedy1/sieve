@@ -2,7 +2,8 @@ package ea
 
 import (
 	"fmt"
-	"math/rand"
+	"math"
+	"math/rand/v2"
 )
 
 type Population[G any] struct {
@@ -21,6 +22,7 @@ type Population[G any] struct {
 func NewPopulation[G any](
     size int,
     mutationRate float64,
+	crossoverRate float64,
     eliteCount int,
     create func() G,
     evaluate func(G) float64,
@@ -47,24 +49,29 @@ func NewPopulation[G any](
 func (p *Population[G]) Evolve(generations int) {
 	for generation := range generations {
 		fmt.Printf("Generation %d\n", generation)
-        for i, g := range p.genomes {
-            p.fitnesses[i] = p.evaluate(g)
+		for i, g := range p.Genomes {
+			p.Fitnesses[i] = p.Evaluate(g)
         }
         
-        parentIndices := p.selector(p.fitnesses, len(p.genomes))
-        offspring := make([]G, 0, len(p.genomes))
+		parentIndices := p.selector(p.Fitnesses, len(p.Genomes))
+		offspring := make([]G, 0, len(p.Genomes))
         
         for i := 0; i < len(parentIndices)-1; i += 2 {
             idx1, idx2 := parentIndices[i], parentIndices[i+1]
-            c1, c2 := p.crossover(p.genomes[idx1], p.genomes[idx2])
+
+			c1, c2 := p.Genomes[idx1], p.Genomes[idx2]
             
+			// apply crossover with probability p.crossoverRate
+			if rand.Float64() < p.crossoverRate {
+				c1, c2 = p.crossover(c1, c2)
+			} else {
             if rand.Float64() < p.mutationRate {
                 c1 = p.mutate(c1)
             }
             if rand.Float64() < p.mutationRate {
                 c2 = p.mutate(c2)
             }
-            
+			}
             offspring = append(offspring, c1, c2)
         }
         
@@ -74,19 +81,19 @@ func (p *Population[G]) Evolve(generations int) {
             offspring = append(offspring, elite...)
         }
         
-        p.genomes = offspring
+		p.Genomes = offspring
     }
 }
 
 func (p *Population[G]) getElite() []G {
-    indices := make([]int, len(p.genomes))
+	indices := make([]int, len(p.Genomes))
     for i := range indices {
         indices[i] = i
     }
     
-	for i:= range indices {
+	for i := range indices {
         for j := i + 1; j < len(indices); j++ {
-            if p.fitnesses[indices[j]] > p.fitnesses[indices[i]] {
+			if p.Fitnesses[indices[j]] > p.Fitnesses[indices[i]] {
                 indices[i], indices[j] = indices[j], indices[i]
             }
         }
@@ -94,21 +101,26 @@ func (p *Population[G]) getElite() []G {
     
     elite := make([]G, p.eliteCount)
     for i := 0; i < p.eliteCount; i++ {
-        elite[i] = p.genomes[indices[i]]
+		elite[i] = p.Genomes[indices[i]]
     }
     return elite
 }
 
 func (p *Population[G]) Best() (G, float64) {
-    bestIdx := 0
-    bestFit := p.fitnesses[0]
+	bestIdx := -1
+	bestFit := -100000000.0
+
+	// fmt.Println(len(p.Fitnesses))
     
-    for i, f := range p.fitnesses {
+	for i, f := range p.Fitnesses {
+		fmt.Println("Fitness", i, ":", f)
+		if math.IsInf(f, 0) {
+			continue
+		}
         if f > bestFit {
             bestIdx = i
             bestFit = f
         }
     }
-    
-    return p.genomes[bestIdx], bestFit
+	return p.Genomes[bestIdx], bestFit
 }
