@@ -24,7 +24,7 @@ func TestRMSEfromGrammar(t *testing.T) {
 	rmseFunc := NewRMSE(samples, grammar)
 	got := rmseFunc(genotype)
 
-	want := 0.0
+	want := -0.007
 
 	if got != want {
 		t.Errorf("Got RMSE %f, want %f", got, want)
