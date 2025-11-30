@@ -30,7 +30,6 @@ func main() {
 	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
 	g := grammar.Parse(*s)
-	gr := g
 	g.BuildRuleMap()
 
 	targetExpressionString := config.TargetExpressionString
@@ -59,7 +58,7 @@ func main() {
 		genomes.NewMutateGenotype(r, config.Population.MutationRate),
 		ea.Tournament(config.Population.TournamentSize),
 		func(g genomes.Genotype) string {
-			return g.MapToGrammar(gr, config.MaxGenes).String()
+			return string(g.Genes)
 		},
 	)
 
