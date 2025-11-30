@@ -47,7 +47,6 @@ func main() {
 		return
 	}
 
-	// Use config variables for Population setup, accessing the nested fields
 	population := ea.NewPopulation(
 		config.Population.Size,
 		config.Population.MutationRate,
@@ -58,11 +57,13 @@ func main() {
 		genomes.NewCrossoverGenotype(r),
 		genomes.NewMutateGenotype(r, config.Population.MutationRate),
 		ea.Tournament(config.Population.TournamentSize),
+		func(g genomes.Genotype) string {
+			return string(g.Genes)
+		},
 	)
 
 	start := time.Now()
 
-	// Use config variable for evolution generations
 	population.Evolve(config.Generations)
 
 	elapsed := time.Since(start)
