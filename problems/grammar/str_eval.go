@@ -76,12 +76,11 @@ func GenerateSamples(exprStr string, numSamples int, variables []float64, gr gen
 	return samples, nil
 }
 
-func NewRMSE(samples []Sample, gr genomes.Grammar) func(g genomes.Genotype) float64 {
-	const parsimonyPenalty = 0.001
+func NewRMSE(samples []Sample, gr genomes.Grammar, parsimonyPenalty float64, maxGenes int) func(g genomes.Genotype) float64 {
 
 	return func(g genomes.Genotype) float64 {
 		varMap := genomes.BuildVarMapFromGrammar(gr)
-		exprStr := g.MapToGrammar(gr, 100).String()
+		exprStr := g.MapToGrammar(gr, maxGenes).String()
 
 		lengthPenalty := float64(len(exprStr)) * parsimonyPenalty
 

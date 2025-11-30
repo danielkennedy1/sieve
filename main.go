@@ -7,68 +7,38 @@ import (
 	"os"
 	"time"
 
+	"github.com/danielkennedy1/sieve/config"
 	"github.com/danielkennedy1/sieve/ea"
 	"github.com/danielkennedy1/sieve/genomes"
 	"github.com/danielkennedy1/sieve/problems/grammar"
 )
 
 func main() {
-	f, err := os.Open("data/lecture.bnf")
+	config, err := config.LoadConfig()
 	if err != nil {
-		fmt.Println("File not found")
+		fmt.Printf("Fatal error loading configuration: %v\n", err)
+		os.Exit(1)
+	}
+
+	f, err := os.Open(config.BNFFilePath)
+	if err != nil {
+		fmt.Printf("File not found: %s\n", config.BNFFilePath)
 		os.Exit(1)
 	}
 	defer f.Close()
 
-	variables := []float64{1.0, 2.0, 3.0}
-
-	target := genomes.NonTerminal{
-		Operator: genomes.Add,
-		Left: genomes.NonTerminal{
-			Operator: genomes.Add,
-			Left: genomes.NonTerminal{
-				Operator: genomes.Multiply,
-				Left: genomes.NonTerminal{
-					Operator: genomes.Multiply,
-					Left:     genomes.Variable{Variables: &variables, Index: 0},
-					Right:    genomes.Variable{Variables: &variables, Index: 0},
-				},
-				Right: genomes.NonTerminal{
-					Operator: genomes.Multiply,
-					Left:     genomes.Variable{Variables: &variables, Index: 0},
-					Right:    genomes.Variable{Variables: &variables, Index: 0},
-				},
-			},
-			Right: genomes.NonTerminal{
-				Operator: genomes.Multiply,
-				Left: genomes.NonTerminal{
-					Operator: genomes.Multiply,
-					Left:     genomes.Variable{Variables: &variables, Index: 0},
-					Right:    genomes.Variable{Variables: &variables, Index: 0},
-				},
-				Right: genomes.Variable{Variables: &variables, Index: 0},
-			},
-		},
-		Right: genomes.NonTerminal{
-			Operator: genomes.Add,
-			Left: genomes.NonTerminal{
-				Operator: genomes.Multiply,
-				Left:     genomes.Variable{Variables: &variables, Index: 0},
-				Right:    genomes.Variable{Variables: &variables, Index: 0},
-			},
-			Right: genomes.Variable{Variables: &variables, Index: 0},
-		},
-	}
-
-	fmt.Println(target.String())
 	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
 	g := grammar.Parse(*s)
 	g.BuildRuleMap()
 
-	targetExpressionString := "(a + (a * a) + (a * a * a)) + (a * a * a * a)"
-	numSamplesToGenerate := 50
-	initialVariables := []float64{0.0}
+	targetExpressionString := config.TargetExpressionString
+	numSamplesToGenerate := config.NumSamplesToGenerate
+	initialVariables := make([]float64, config.NumVars)
+
+	for i := 0; i < config.NumVars; i++ {
+		initialVariables[i] = 0.0
+	}
 
 	samples, err := grammar.GenerateSamples(targetExpressionString, numSamplesToGenerate, initialVariables, g)
 
@@ -77,21 +47,23 @@ func main() {
 		return
 	}
 
+	// Use config variables for Population setup, accessing the nested fields
 	population := ea.NewPopulation(
-		500,
-		0.1,
-		0.7,
-		15,
-		genomes.NewCreateGenotype(48, r),
-		grammar.NewRMSE(samples, g),
+		config.Population.Size,
+		config.Population.MutationRate,
+		config.Population.CrossoverRate,
+		config.Population.EliteCount,
+		genomes.NewCreateGenotype(config.Population.GeneLength, r),
+		grammar.NewRMSE(samples, g, config.ParsiomonyPenalty, config.MaxGenes),
 		genomes.NewCrossoverGenotype(r),
-		genomes.NewMutateGenotype(r, 0.1),
-		ea.Tournament(7),
+		genomes.NewMutateGenotype(r, config.Population.MutationRate),
+		ea.Tournament(config.Population.TournamentSize),
 	)
 
 	start := time.Now()
 
-	population.Evolve(100)
+	// Use config variable for evolution generations
+	population.Evolve(config.Generations)
 
 	elapsed := time.Since(start)
 

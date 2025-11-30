@@ -21,7 +21,7 @@ func TestRMSEfromGrammar(t *testing.T) {
 		{Variables: []float64{5, 0}, Output: 5.2},
 	}
 
-	rmseFunc := NewRMSE(samples, grammar)
+	rmseFunc := NewRMSE(samples, grammar, 0.001, 100)
 	got := rmseFunc(genotype)
 
 	want := -0.007
