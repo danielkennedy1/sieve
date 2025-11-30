@@ -1,0 +1,22 @@
+# config.toml
+
+# Sample Generation Settings
+target_expression_string = "(a + (a * a) + (a * a * a) + (a * a * a * a))"
+num_vars = 1
+num_samples_to_generate = 100
+
+# Population Settings
+[population]
+size = 500
+mutation_rate = 0.1
+crossover_rate = 0.7
+max_depth = 5
+gene_length = 48
+tournament_size = 7
+elite_count = 10
+
+# Evolution Settings
+generations = 200
+
+# General Settings
+bnf_file_path = "data/lecture.bnf"
