@@ -9,9 +9,8 @@ import (
 )
 
 type Population[G any] struct {
-	genomes   []G
-	fitnesses []float64
-
+	genomes       []G
+	fitnesses     []float64
 	evaluate      func(G) float64
 	crossover     func(G, G) (G, G)
 	mutate        func(G) G
@@ -20,6 +19,10 @@ type Population[G any] struct {
 	mutationRate  float64
 	eliteCount    int
 	numWorkers    int
+
+	cache      map[string]float64
+	cacheMutex sync.RWMutex
+	toKey      func(G) string
 }
 
 func NewPopulation[G any](
@@ -32,14 +35,13 @@ func NewPopulation[G any](
 	crossover func(G, G) (G, G),
 	mutate func(G) G,
 	selector func([]float64, int) []int,
+	toKey func(G) string,
 ) *Population[G] {
 	genomes := make([]G, size)
 	for i := range genomes {
 		genomes[i] = create()
 	}
-
 	numWorkers := min(size, 8)
-
 	return &Population[G]{
 		genomes:       genomes,
 		fitnesses:     make([]float64, size),
@@ -51,6 +53,8 @@ func NewPopulation[G any](
 		mutationRate:  mutationRate,
 		eliteCount:    eliteCount,
 		numWorkers:    numWorkers,
+		cache:         make(map[string]float64),
+		toKey:         toKey,
 	}
 }
 
@@ -63,7 +67,24 @@ func (p *Population[G]) evaluateAll() {
 		go func() {
 			defer wg.Done()
 			for idx := range jobs {
-				p.fitnesses[idx] = p.evaluate(p.genomes[idx])
+				key := p.toKey(p.genomes[idx])
+
+				// Check cache first (read lock)
+				p.cacheMutex.RLock()
+				fitness, exists := p.cache[key]
+				p.cacheMutex.RUnlock()
+
+				if exists {
+					p.fitnesses[idx] = fitness
+				} else {
+					// Evaluate and store in cache (write lock)
+					fitness = p.evaluate(p.genomes[idx])
+					p.fitnesses[idx] = fitness
+
+					p.cacheMutex.Lock()
+					p.cache[key] = fitness
+					p.cacheMutex.Unlock()
+				}
 			}
 		}()
 	}
@@ -72,7 +93,6 @@ func (p *Population[G]) evaluateAll() {
 		jobs <- i
 	}
 	close(jobs)
-
 	wg.Wait()
 }
 

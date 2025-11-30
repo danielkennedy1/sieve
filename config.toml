@@ -1,9 +1,9 @@
 # config.toml
 
 # Sample Generation Settings
-target_expression_string = "(a + (a * a) + (a * a * a) + (a * a * a * a))"
+target_expression_string = "a + a * a + a * a * a + a * a * a * a"
 num_vars = 1
-num_samples_to_generate = 100
+num_samples_to_generate = 20
 
 # Fitness
 parsimony_penalty = 0.001

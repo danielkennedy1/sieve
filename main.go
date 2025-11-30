@@ -30,6 +30,7 @@ func main() {
 	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
 	g := grammar.Parse(*s)
+	gr := g
 	g.BuildRuleMap()
 
 	targetExpressionString := config.TargetExpressionString
@@ -47,7 +48,6 @@ func main() {
 		return
 	}
 
-	// Use config variables for Population setup, accessing the nested fields
 	population := ea.NewPopulation(
 		config.Population.Size,
 		config.Population.MutationRate,
@@ -58,11 +58,13 @@ func main() {
 		genomes.NewCrossoverGenotype(r),
 		genomes.NewMutateGenotype(r, config.Population.MutationRate),
 		ea.Tournament(config.Population.TournamentSize),
+		func(g genomes.Genotype) string {
+			return g.MapToGrammar(gr, config.MaxGenes).String()
+		},
 	)
 
 	start := time.Now()
 
-	// Use config variable for evolution generations
 	population.Evolve(config.Generations)
 
 	elapsed := time.Since(start)
