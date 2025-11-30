@@ -54,7 +54,7 @@ func main() {
 		config.Population.CrossoverRate,
 		config.Population.EliteCount,
 		genomes.NewCreateGenotype(config.Population.GeneLength, r),
-		grammar.NewRMSE(samples, g),
+		grammar.NewRMSE(samples, g, config.ParsiomonyPenalty, config.MaxGenes),
 		genomes.NewCrossoverGenotype(r),
 		genomes.NewMutateGenotype(r, config.Population.MutationRate),
 		ea.Tournament(config.Population.TournamentSize),

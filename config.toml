@@ -5,6 +5,10 @@ target_expression_string = "(a + (a * a) + (a * a * a) + (a * a * a * a))"
 num_vars = 1
 num_samples_to_generate = 100
 
+# Fitness
+parsimony_penalty = 0.001
+max_genes = 100 
+
 # Population Settings
 [population]
 size = 500

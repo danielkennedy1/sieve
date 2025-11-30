@@ -28,6 +28,10 @@ type Config struct {
 	// Evolution Settings (Top level)
 	Generations int `mapstructure:"generations"`
 
+	// Fitness Settings (Top level)
+	ParsiomonyPenalty float64 `mapstructure:"parsimony_penalty"`
+	MaxGenes          int     `mapstructure:"max_genes"`
+
 	// General Settings (Top level)
 	BNFFilePath string `mapstructure:"bnf_file_path"`
 }
