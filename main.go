@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	config, err := config.LoadConfig()
+	config, err := config.LoadConfig("nyse")
 	if err != nil {
 		fmt.Printf("Fatal error loading configuration: %v\n", err)
 		os.Exit(1)
