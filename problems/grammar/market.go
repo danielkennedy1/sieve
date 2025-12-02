@@ -18,8 +18,8 @@ func NewTransactionFitness(gr genomes.Grammar, prices []float64, initialFunds fl
 
 		for _, p := range prices {
 			exprStr := g.MapToGrammar(gr, 100).String()
-			strings.ReplaceAll(exprStr, "$PRICE", strconv.FormatFloat(p, 'f', -1, 64))
-			program, err := expr.Compile(exprStr, expr.AllowUndefinedVariables())
+			exprStr = strings.ReplaceAll(exprStr, "$PRICE", strconv.FormatFloat(p, 'f', -1, 64))
+			program, err := expr.Compile(exprStr)
 
 			if err != nil {
 				fmt.Println("Error compiling: ", exprStr)
@@ -31,6 +31,7 @@ func NewTransactionFitness(gr genomes.Grammar, prices []float64, initialFunds fl
 
 			if err != nil {
 				fmt.Println("Error running: ", exprStr)
+				fmt.Println(err)
 				return math.Inf(-1)
 			}
 

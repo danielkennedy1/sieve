@@ -6,8 +6,10 @@ import (
 	"math/rand/v2"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/danielkennedy1/sieve/config"
+	"github.com/danielkennedy1/sieve/ea"
 	"github.com/danielkennedy1/sieve/genomes"
 	"github.com/danielkennedy1/sieve/problems/grammar"
 )
@@ -36,6 +38,7 @@ func main() {
 		fmt.Println("Prices file not found")
 		os.Exit(1)
 	}
+	defer f.Close()
 
 	var prices []float64
 
@@ -65,4 +68,29 @@ func main() {
 		fmt.Println(transactionFitness(sample))
 	}
 
+	population := ea.NewPopulation(
+		config.Population.Size,
+		config.Population.MutationRate,
+		config.Population.CrossoverRate,
+		config.Population.EliteCount,
+		genomes.NewCreateGenotype(config.Population.GeneLength, r),
+		grammar.NewTransactionFitness(gr, prices, initialFunds),
+		genomes.NewCrossoverGenotype(r),
+		genomes.NewMutateGenotype(r, config.Population.MutationRate),
+		ea.Tournament(config.Population.TournamentSize),
+		func(g genomes.Genotype) string {
+			return string(g.Genes)
+		},
+		)
+
+		start := time.Now()
+
+		population.Evolve(config.Generations)
+
+		elapsed := time.Since(start)
+
+		best, fitness := population.Best()
+		fmt.Printf("Best fitness: %.2f\n", fitness)
+		fmt.Println("Best: ", best.MapToGrammar(gr, 100).String())
+		fmt.Printf("Elapsed time: %s\n", elapsed)
 }
