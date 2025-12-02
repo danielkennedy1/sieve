@@ -51,22 +51,11 @@ func main() {
 		prices = append(prices, val)
 	}
 
-	populationSize := 1
-
 	initialFunds := 30_000.0
 
 	transactionFitness := grammar.NewTransactionFitness(gr, prices, initialFunds)
 
 	sampleMaker := genomes.NewCreateGenotype(config.Population.GeneLength, r)
-
-	for range populationSize {
-		sample := sampleMaker()
-		fmt.Println("----")
-
-		fmt.Println(sample.MapToGrammar(gr, 10).String())
-		
-		fmt.Println(transactionFitness(sample))
-	}
 
 	population := ea.NewPopulation(
 		config.Population.Size,
