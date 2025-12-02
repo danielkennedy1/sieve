@@ -47,16 +47,22 @@ func main() {
 		}
 		prices = append(prices, val)
 	}
-	fmt.Println("Prices ", prices)
 
-	transaction_fitness := grammar.NewTransactionFitness(gr)
+	populationSize := 1
 
-	sample_maker := genomes.NewCreateGenotype(config.Population.GeneLength, r)
+	initialFunds := 30_000.0
 
-	for range 1 {
-		sample := sample_maker()
+	transactionFitness := grammar.NewTransactionFitness(gr, prices, initialFunds)
+
+	sampleMaker := genomes.NewCreateGenotype(config.Population.GeneLength, r)
+
+	for range populationSize {
+		sample := sampleMaker()
 		fmt.Println("----")
-		fmt.Println(transaction_fitness(sample))
+
+		fmt.Println(sample.MapToGrammar(gr, 10).String())
+		
+		fmt.Println(transactionFitness(sample))
 	}
 
 }

@@ -1,8 +1,7 @@
-<strategy> ::= IF <condition> BUY AT <price> ELSE IF <condition> SELL AT <price>
-<price> ::= "MARKET"
+<strategy> ::= <condition> ? ( "BUY" ) : ( <condition> ? ( "SELL" ) : ( "HOLD" ) )
 <condition> ::= <expr> <comp> <expr> | true | false
 <comp> ::= > | < | ==
-<expr> ::= if <condition> then <expr> else <expr> | <expr> <op> <expr> | <expr> <op> <expr> | <val> | <val>
+<expr> ::= ( <condition> ? <expr> : <expr> ) | ( <expr> <op> <expr> ) | ( <val> )
 <op> ::= + | - | * | /
-<val> ::= price | <const>
+<val> ::= $PRICE | <const>
 <const> ::= 400..500

@@ -2,7 +2,6 @@ package grammar
 
 import (
 	"bufio"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -26,13 +25,9 @@ func Parse(scanner bufio.Scanner) genomes.Grammar {
 			matches := numberRange.FindStringSubmatch(s)
 
 			if matches != nil {
-				fmt.Println("Match 1 is ", matches[1])
-				fmt.Println("Match 2 is ", matches[2])
 
 				start, _ := strconv.Atoi(matches[1])
 				end, _ := strconv.Atoi(matches[2])
-
-				fmt.Println("Making Range from ", start, " to ", end)
 
 				for i := start; i < end; i++ {
 					productions = append(productions, genomes.Production{Elements: []string{strconv.Itoa(i)}})
