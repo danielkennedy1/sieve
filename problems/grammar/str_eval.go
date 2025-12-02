@@ -14,7 +14,7 @@ type Sample struct {
 	Output    float64
 }
 
-func GenerateSamples(exprStr string, numSamples int, variables []float64, gr genomes.Grammar) ([]Sample, error) {
+func GenerateSamples(exprStr string, numSamples int, variables []float64, gr genomes.Grammar, parsimonyPenalty float64) ([]Sample, error) {
 	if numSamples <= 0 {
 		return nil, errors.New("numSamples must be greater than zero")
 	}
@@ -38,6 +38,7 @@ func GenerateSamples(exprStr string, numSamples int, variables []float64, gr gen
 	varMap := genomes.BuildVarMapFromGrammar(gr)
 	env := map[string]interface{}{}
 	samples := make([]Sample, 0, numSamples)
+	lengthPenalty := float64(len(exprStr)) * parsimonyPenalty
 
 	for i := 0; i < numSamples; i++ {
 		currentInput := startRange + float64(i)*step
@@ -60,7 +61,7 @@ func GenerateSamples(exprStr string, numSamples int, variables []float64, gr gen
 		if math.IsNaN(result) || math.IsInf(result, 0) {
 			return nil, fmt.Errorf("expression resulted in NaN or Infinity at input x0=%.2f", currentInput)
 		}
-
+		result += lengthPenalty
 		inputVarsClone := make([]float64, len(variables))
 		copy(inputVarsClone, variables)
 
