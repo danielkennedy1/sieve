@@ -56,11 +56,11 @@ func DefaultConfig() Config {
 	}
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(configFile string) (*Config, error) {
 	v := viper.New()
 	cfg := DefaultConfig()
 
-	v.SetConfigName("config")
+	v.SetConfigName(configFile)
 	v.SetConfigType("toml")
 	v.AddConfigPath(".")
 
