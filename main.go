@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/danielkennedy1/sieve/config"
@@ -29,23 +30,32 @@ func main() {
 
 	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
-	g := grammar.Parse(*s)
-	g.BuildRuleMap()
+	gr := grammar.Parse(*s)
+	gr.BuildRuleMap()
 
-	targetExpressionString := config.TargetExpressionString
-	numSamplesToGenerate := config.NumSamplesToGenerate
-	initialVariables := make([]float64, config.NumVars)
-
-	for i := 0; i < config.NumVars; i++ {
-		initialVariables[i] = 0.0
-	}
-
-	samples, err := grammar.GenerateSamples(targetExpressionString, numSamplesToGenerate, initialVariables, g, config.ParsiomonyPenalty)
-
+	f, err = os.Open("data/dominoes.txt")
 	if err != nil {
-		fmt.Printf("Error generating samples: %v\n", err)
-		return
+		fmt.Println("Prices file not found")
+		os.Exit(1)
 	}
+	defer f.Close()
+
+	var prices []float64
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		val, err := strconv.ParseFloat(scanner.Text(), 64)
+		if err != nil {
+			continue
+		}
+		prices = append(prices, val)
+	}
+
+	initialFunds := 30_000.0
+
+	transactionFitness := grammar.NewTransactionFitness(gr, prices, initialFunds)
+
+	sampleMaker := genomes.NewCreateGenotype(config.Population.GeneLength, r)
 
 	population := ea.NewPopulation(
 		config.Population.Size,
@@ -53,24 +63,23 @@ func main() {
 		config.Population.CrossoverRate,
 		config.Population.EliteCount,
 		genomes.NewCreateGenotype(config.Population.GeneLength, r),
-		grammar.NewRMSE(samples, g, config.ParsiomonyPenalty, config.MaxGenes),
+		grammar.NewTransactionFitness(gr, prices, initialFunds),
 		genomes.NewCrossoverGenotype(r),
 		genomes.NewMutateGenotype(r, config.Population.MutationRate),
 		ea.Tournament(config.Population.TournamentSize),
 		func(g genomes.Genotype) string {
 			return string(g.Genes)
 		},
-	)
+		)
 
-	start := time.Now()
+		start := time.Now()
 
-	population.Evolve(config.Generations)
+		population.Evolve(config.Generations)
 
-	elapsed := time.Since(start)
+		elapsed := time.Since(start)
 
-	best, fitness := population.Best()
-	fmt.Printf("Best fitness: %.2f\n", fitness)
-	fmt.Println("Best: ", best.MapToGrammar(g, 100).String())
-	fmt.Printf("Elapsed time: %s\n", elapsed)
-
+		best, fitness := population.Best()
+		fmt.Printf("Best fitness: %.2f\n", fitness)
+		fmt.Println("Best: ", best.MapToGrammar(gr, 100).String())
+		fmt.Printf("Elapsed time: %s\n", elapsed)
 }

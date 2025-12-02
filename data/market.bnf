@@ -1,0 +1,7 @@
+<strategy> ::= <condition> ? ( "BUY" ) : ( <condition> ? ( "SELL" ) : ( "HOLD" ) )
+<condition> ::= <numeric> <comp> <numeric>
+<comp> ::= > | < | ==
+<numeric> ::= ( <condition> ? <numeric> : <numeric> ) | ( <numeric> <op> <numeric> ) | ( <val> )
+<op> ::= + | - | * | /
+<val> ::= $PRICE | <const>
+<const> ::= 400..500
