@@ -8,14 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createTempConfigFile(t *testing.T, content string) string {
-	tempDir := t.TempDir()
-	tempFilePath := filepath.Join(tempDir, "config.toml")
-	err := os.WriteFile(tempFilePath, []byte(content), 0600)
-	assert.NoError(t, err, "Failed to create temporary config file")
-	return tempFilePath
-}
-
 func TestDefaultConfig(t *testing.T) {
 	expectedTarget := "(a + (a * a) + (a * a * a) + (a * a * a * a))"
 	expectedPopSize := 500
@@ -49,7 +41,7 @@ gene_length = 30
 	originalWd, _ := os.Getwd()
 
 	tempDir := t.TempDir()
-	tempFilePath := filepath.Join(tempDir, "config.toml")
+	tempFilePath := filepath.Join(tempDir, "test.toml")
 	err := os.WriteFile(tempFilePath, []byte(tomlContent), 0600)
 	assert.NoError(t, err)
 
