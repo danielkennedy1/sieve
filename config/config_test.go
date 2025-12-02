@@ -67,7 +67,7 @@ gene_length = 30
 	expectedMutationRate := 0.5
 	expectedMaxDepth := 5
 
-	cfg, err := LoadConfig()
+	cfg, err := LoadConfig("test")
 
 	assert.NoError(t, err, "LoadConfig should not return an error when file is present")
 	assert.NotNil(t, cfg, "Config should not be nil")
