@@ -41,8 +41,13 @@ gene_length = 30
 	originalWd, _ := os.Getwd()
 
 	tempDir := t.TempDir()
-	tempFilePath := filepath.Join(tempDir, "test.toml")
-	err := os.WriteFile(tempFilePath, []byte(tomlContent), 0600)
+	configDir := filepath.Join(tempDir, "config")
+	err := os.Mkdir(configDir, 0755)
+	assert.NoError(t, err)
+
+	tempFilePath := filepath.Join(configDir, "test.toml")
+
+	err = os.WriteFile(tempFilePath, []byte(tomlContent), 0600)
 	assert.NoError(t, err)
 
 	err = os.Chdir(tempDir)
