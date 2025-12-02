@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"os"
+	"strconv"
 
 	"github.com/danielkennedy1/sieve/config"
 	"github.com/danielkennedy1/sieve/genomes"
@@ -27,27 +28,34 @@ func main() {
 
 	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
-	g := grammar.Parse(*s)
-	g.BuildRuleMap()
+	gr := grammar.Parse(*s)
+	gr.BuildRuleMap()
 
-	initialVariables := make([]float64, config.NumVars)
-
-	for i := 0; i < config.NumVars; i++ {
-		initialVariables[i] = 0.0
-	}
-
+	f, err = os.Open("data/dominoes.txt")
 	if err != nil {
-		fmt.Printf("Error generating samples: %v\n", err)
-		return
+		fmt.Println("Prices file not found")
+		os.Exit(1)
 	}
 
-	transaction_fitness := grammar.NewTransactionFitness()
+	var prices []float64
 
-	for range 100 {
-		sample_maker := genomes.NewCreateGenotype(config.Population.GeneLength, r)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		val, err := strconv.ParseFloat(scanner.Text(), 64)
+		if err != nil {
+			continue
+		}
+		prices = append(prices, val)
+	}
+	fmt.Println("Prices ", prices)
+
+	transaction_fitness := grammar.NewTransactionFitness(gr)
+
+	sample_maker := genomes.NewCreateGenotype(config.Population.GeneLength, r)
+
+	for range 1 {
 		sample := sample_maker()
 		fmt.Println("----")
-		fmt.Println(sample.MapToGrammar(g, 100).String())
 		fmt.Println(transaction_fitness(sample))
 	}
 

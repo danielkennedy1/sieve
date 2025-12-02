@@ -1,9 +1,8 @@
-<strategy> ::= IF <condition> BUY <proportion> AT <price> ELSE IF <condition> SELL <proportion> AT <price>
+<strategy> ::= IF <condition> BUY AT <price> ELSE IF <condition> SELL AT <price>
 <price> ::= "MARKET"
 <condition> ::= <expr> <comp> <expr> | true | false
 <comp> ::= > | < | ==
 <expr> ::= if <condition> then <expr> else <expr> | <expr> <op> <expr> | <expr> <op> <expr> | <val> | <val>
 <op> ::= + | - | * | /
-<val> ::= price[ <ago> ] | <const>
-<const> ::= 1 | 2 | 3 | 4 | 5
-<ago> ::= 1 | 2 | 3
+<val> ::= price | <const>
+<const> ::= 400..500
