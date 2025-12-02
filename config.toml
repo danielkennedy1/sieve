@@ -6,7 +6,7 @@ num_vars = 1
 num_samples_to_generate = 20
 
 # Evolution Settings
-generations = 500
+generations = 5
 # Fitness
 parsimony_penalty = 0.001
 max_genes = 100 
