@@ -40,7 +40,7 @@ func main() {
 		initialVariables[i] = 0.0
 	}
 
-	samples, err := grammar.GenerateSamples(targetExpressionString, numSamplesToGenerate, initialVariables, g)
+	samples, err := grammar.GenerateSamples(targetExpressionString, numSamplesToGenerate, initialVariables, g, config.ParsiomonyPenalty)
 
 	if err != nil {
 		fmt.Printf("Error generating samples: %v\n", err)
