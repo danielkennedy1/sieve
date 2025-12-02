@@ -53,9 +53,9 @@ func main() {
 
 	initialFunds := 30_000.0
 
-	transactionFitness := grammar.NewTransactionFitness(gr, prices, initialFunds)
+	// transactionFitness := grammar.NewTransactionFitness(gr, prices, initialFunds)
 
-	sampleMaker := genomes.NewCreateGenotype(config.Population.GeneLength, r)
+	// sampleMaker := genomes.NewCreateGenotype(config.Population.GeneLength, r)
 
 	population := ea.NewPopulation(
 		config.Population.Size,
@@ -70,16 +70,16 @@ func main() {
 		func(g genomes.Genotype) string {
 			return string(g.Genes)
 		},
-		)
+	)
 
-		start := time.Now()
+	start := time.Now()
 
-		population.Evolve(config.Generations)
+	population.Evolve(config.Generations)
 
-		elapsed := time.Since(start)
+	elapsed := time.Since(start)
 
-		best, fitness := population.Best()
-		fmt.Printf("Best fitness: %.2f\n", fitness)
-		fmt.Println("Best: ", best.MapToGrammar(gr, 100).String())
-		fmt.Printf("Elapsed time: %s\n", elapsed)
+	best, fitness := population.Best()
+	fmt.Printf("Best fitness: %.2f\n", fitness)
+	fmt.Println("Best: ", best.MapToGrammar(gr, 100).String())
+	fmt.Printf("Elapsed time: %s\n", elapsed)
 }

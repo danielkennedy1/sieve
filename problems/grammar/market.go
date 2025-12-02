@@ -1,40 +1,33 @@
 package grammar
 
 import (
-	"fmt"
-	"strings"
-	"strconv"
 	"math"
 
-	"github.com/expr-lang/expr"
 	"github.com/danielkennedy1/sieve/genomes"
+	"github.com/expr-lang/expr"
 )
 
 func NewTransactionFitness(gr genomes.Grammar, prices []float64, initialFunds float64) func(g genomes.Genotype) float64 {
 	return func(g genomes.Genotype) float64 {
-
 		var funds = initialFunds
 		var holdings = 0
 
+		exprStr := g.MapToGrammar(gr, 7).String()
+		program, err := expr.Compile(exprStr, expr.Env(map[string]interface{}{
+			"$PRICE": 0.0,
+		}))
+		if err != nil {
+			return math.Inf(-1)
+		}
+
+		// Run with different prices
 		for _, p := range prices {
-			exprStr := g.MapToGrammar(gr, 100).String()
-			exprStr = strings.ReplaceAll(exprStr, "$PRICE", strconv.FormatFloat(p, 'f', -1, 64))
-			program, err := expr.Compile(exprStr)
-
+			out, err := expr.Run(program, map[string]interface{}{
+				"$PRICE": p,
+			})
 			if err != nil {
-				fmt.Println("Error compiling: ", exprStr)
-				fmt.Println(err)
 				return math.Inf(-1)
 			}
-
-			out, err := expr.Run(program, nil)
-
-			if err != nil {
-				fmt.Println("Error running: ", exprStr)
-				fmt.Println(err)
-				return math.Inf(-1)
-			}
-
 			// TODO: will have to manage proportions
 			switch out {
 			case "BUY":
@@ -51,6 +44,6 @@ func NewTransactionFitness(gr genomes.Grammar, prices []float64, initialFunds fl
 			}
 		}
 
-		return funds + prices[len(prices) - 1] * float64(holdings)
+		return funds + prices[len(prices)-1]*float64(holdings)
 	}
 }
