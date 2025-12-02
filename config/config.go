@@ -62,7 +62,7 @@ func LoadConfig(configFile string) (*Config, error) {
 
 	v.SetConfigName(configFile)
 	v.SetConfigType("toml")
-	v.AddConfigPath(".")
+	v.AddConfigPath("./config")
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
