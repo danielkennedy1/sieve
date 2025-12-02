@@ -1,0 +1,21 @@
+
+# nyse.toml
+
+
+# Evolution Settings
+generations = 100
+# Fitness
+max_genes = 100 
+# General Settings
+bnf_file_path = "data/market.bnf"
+
+# Population Settings
+[population]
+size = 500
+mutation_rate = 0.1
+crossover_rate = 0.7
+max_depth = 5
+gene_length = 100
+tournament_size = 7
+elite_count = 10
+
