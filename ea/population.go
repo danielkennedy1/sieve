@@ -23,6 +23,10 @@ type Population[G any] struct {
 	cache      map[string]float64
 	cacheMutex sync.RWMutex
 	toKey      func(G) string
+
+	BeforeEvaluate func([]G)
+	AfterEvaluate  func([]float64)
+	AfterSelection func([]G)
 }
 
 func NewPopulation[G any](
@@ -103,7 +107,15 @@ func (p *Population[G]) Evolve(generations int) {
 		start := time.Now()
 		fmt.Printf("Generation %d\n", generation)
 
+		if p.BeforeEvaluate != nil {
+			p.BeforeEvaluate(p.genomes)
+		}
+
 		p.evaluateAll()
+
+		if p.AfterEvaluate != nil {
+			p.AfterEvaluate(p.fitnesses)
+		}
 
 		parentIndices := p.selector(p.fitnesses, len(p.genomes))
 
@@ -170,6 +182,11 @@ func (p *Population[G]) Evolve(generations int) {
 			elite := p.getElite()
 			offspring = offspring[:len(offspring)-p.eliteCount]
 			offspring = append(offspring, elite...)
+		}
+
+		// HOOK: Called after creating offspring (for resetting portfolios)
+		if p.AfterSelection != nil {
+			p.AfterSelection(offspring)
 		}
 
 		p.genomes = offspring
