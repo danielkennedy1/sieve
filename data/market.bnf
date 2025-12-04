@@ -2,7 +2,7 @@
 <condition> ::= ( <condition> <logic> <condition> ) | ( <val> <comp> <const> )
 <comp> ::= > | < | ==
 <op> ::= + | - | * | /
-<val> ::= $PRICE | $RSI | $HOLDINGS | <const>
+<val> ::= $PRICE | $RSI | $SMA | $VOLUME | $ATR | $CASH | $HOLDINGS | <const>
 <logic> ::= &&
 <proportion> ::= 0.0..1.0
 <const> ::= 0..100
