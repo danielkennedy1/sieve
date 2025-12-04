@@ -64,6 +64,7 @@ func main() {
 		func(g genomes.Genotype) string {
 			return string(g.Genes)
 		},
+		config.Population.CacheBoolean,
 	)
 
 	population.BeforeEvaluate = simulator.BeforeGeneration
