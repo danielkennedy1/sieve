@@ -15,6 +15,7 @@ func NewTransactionFitness(gr genomes.Grammar, prices []float64, initialFunds fl
 		exprStr := g.MapToGrammar(gr, 7).String()
 		program, err := expr.Compile(exprStr, expr.Env(map[string]interface{}{
 			"$PRICE": 0.0,
+			"$HOLDINGS": holdings,
 		}))
 		if err != nil {
 			return math.Inf(-1)
@@ -24,7 +25,9 @@ func NewTransactionFitness(gr genomes.Grammar, prices []float64, initialFunds fl
 		for _, p := range prices {
 			out, err := expr.Run(program, map[string]interface{}{
 				"$PRICE": p,
+				"$HOLDINGS": holdings,
 			})
+
 			if err != nil {
 				return math.Inf(-1)
 			}
