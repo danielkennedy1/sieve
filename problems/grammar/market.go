@@ -60,22 +60,24 @@ func NewMarketHistory() *MarketHistory {
 }
 
 type MarketSimulator struct {
-	Market       *MarketState
-	History      *MarketHistory
-	Grammar      genomes.Grammar
-	InitialFunds float64
-	RoundsPerGen int
-	generation   int
+	Market          *MarketState
+	History         *MarketHistory
+	Grammar         genomes.Grammar
+	InitialFunds    float64
+	InitialHoldings int
+	RoundsPerGen    int
+	generation      int
 }
 
-func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, roundsPerGen int) *MarketSimulator {
+func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings int, roundsPerGen int) *MarketSimulator {
 	return &MarketSimulator{
-		Market:       NewMarketState(initialPrice),
-		History:      NewMarketHistory(),
-		Grammar:      grammar,
-		InitialFunds: initialFunds,
-		RoundsPerGen: roundsPerGen,
-		generation:   0,
+		Market:          NewMarketState(initialPrice),
+		History:         NewMarketHistory(),
+		Grammar:         grammar,
+		InitialFunds:    initialFunds,
+		InitialHoldings: int(initialHoldings),
+		RoundsPerGen:    roundsPerGen,
+		generation:      0,
 	}
 }
 
@@ -200,7 +202,7 @@ func (ms *MarketSimulator) ResetOffspring(offspring []genomes.Genotype) {
 	for i := range offspring {
 		offspring[i].Attributes = make(map[string]interface{})
 		offspring[i].Attributes["cash"] = ms.InitialFunds
-		offspring[i].Attributes["holdings"] = 0
+		offspring[i].Attributes["holdings"] = ms.InitialHoldings
 	}
 }
 
@@ -208,7 +210,7 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 	if g.Attributes == nil {
 		g.Attributes = make(map[string]interface{})
 		g.Attributes["cash"] = ms.InitialFunds
-		g.Attributes["holdings"] = 0
+		g.Attributes["holdings"] = ms.InitialHoldings
 	}
 
 	funds := ms.InitialFunds
@@ -442,6 +444,5 @@ func calculateRSI(prices []float64, period int) float64 {
 
 	// Step 4: Calculate Relative Strength Index (RSI)
 	rsi := 100.0 - (100.0 / (1.0 + rs))
-
 	return rsi
 }

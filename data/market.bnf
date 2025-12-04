@@ -5,4 +5,4 @@
 <op> ::= + | - | * | /
 <val> ::= $PRICE | $RSI
 <proportion> ::= 0.0..1.0
-<const> ::= 0..100
+<const> ::= 25..75

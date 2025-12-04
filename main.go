@@ -50,14 +50,16 @@ func main() {
 		prices = append(prices, val)
 	}
 
-	initialFunds := 1000.0
-	initialPrice := 450.0
-	roundsPerGen := 10
+	initialFunds := 1500.0
+	initialPrice := 100.0
+	initialHoldings := 100
+	roundsPerGen := 100
 
 	simulator := grammar.NewMarketSimulator(
 		gr,
 		initialPrice,
 		initialFunds,
+		initialHoldings,
 		roundsPerGen,
 	)
 
