@@ -5,17 +5,17 @@
 # Evolution Settings
 generations = 100
 # Fitness
-max_genes = 100 
+max_genes = 15 
 # General Settings
 bnf_file_path = "data/market.bnf"
 
 # Population Settings
 [population]
-size = 500
+size = 1000
 mutation_rate = 0.1
-crossover_rate = 0.7
-max_depth = 5
+crossover_rate = 0.6
+max_depth = 3
 gene_length = 100
 tournament_size = 7
-elite_count = 10
+elite_count = 1
 

@@ -1,7 +1,8 @@
-<strategy> ::= <condition> ? ( "BUY" ) : ( <condition> ? ( "SELL" ) : ( "HOLD" ) )
-<condition> ::= <numeric> <comp> <numeric>
+<strategy> ::= <condition> ? ( "SELL" ) : ( <condition> ? ( "BUY" ) : ( "HOLD" ) )
+<condition> ::= <val> <comp> <const>
 <comp> ::= > | < | ==
 <numeric> ::= ( <condition> ? <numeric> : <numeric> ) | ( <numeric> <op> <numeric> ) | ( <val> )
 <op> ::= + | - | * | /
-<val> ::= $PRICE | $HOLDINGS | <const>
-<const> ::= 0..500
+<val> ::= $PRICE | $RSI
+<proportion> ::= 0.0..1.0
+<const> ::= 25..75

@@ -101,7 +101,8 @@ func (node GrammarNode) String() string {
 }
 
 type Genotype struct {
-	Genes []uint8
+	Genes      []uint8
+	Attributes map[string]any
 }
 
 func (gr Grammar) getTerminatingProductionIndex(rule *Rule) int {
@@ -242,12 +243,19 @@ func BuildVarMapFromGrammar(gr Grammar) map[string]int {
 	return m
 }
 
-func NewCreateGenotype(length int, rng *rand.Rand) func() Genotype {
+func NewCreateGenotype(length int, rng *rand.Rand, options ...map[string]any) func() Genotype {
+
+	var attributes map[string]any
+	if len(options) > 0 {
+		attributes = options[0]
+	}
+
 	return func() Genotype {
 		genes := make([]uint8, length)
 		for i := 0; i < length; i++ {
 			genes[i] = uint8(rng.IntN(256))
 		}
-		return Genotype{Genes: genes}
+
+		return Genotype{Genes: genes, Attributes: attributes}
 	}
 }

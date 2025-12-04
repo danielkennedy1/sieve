@@ -1,52 +1,446 @@
 package grammar
 
 import (
+	"encoding/json"
+	"fmt"
 	"math"
+	"os"
 
 	"github.com/danielkennedy1/sieve/genomes"
 	"github.com/expr-lang/expr"
 )
 
-func NewTransactionFitness(gr genomes.Grammar, prices []float64, initialFunds float64) func(g genomes.Genotype) float64 {
-	return func(g genomes.Genotype) float64 {
-		var funds = initialFunds
-		var holdings = 0
+type MarketState struct {
+	CurrentPrice  float64
+	CurrentRSI    float64
+	InitialPrice  float64
+	PriceHistory  []float64
+	VolumeHistory []int
+}
 
-		exprStr := g.MapToGrammar(gr, 7).String()
-		program, err := expr.Compile(exprStr, expr.Env(map[string]interface{}{
-			"$PRICE": 0.0,
-			"$HOLDINGS": holdings,
-		}))
-		if err != nil {
-			return math.Inf(-1)
-		}
+type Order struct {
+	GenotypeID int
+	Action     string
+	Quantity   int
+}
 
-		// Run with different prices
-		for _, p := range prices {
-			out, err := expr.Run(program, map[string]interface{}{
-				"$PRICE": p,
-				"$HOLDINGS": holdings,
-			})
+type MarketHistory struct {
+	Timestamps  []int
+	Prices      []float64
+	Volumes     []int
+	Generations []GenerationSnapshot
+}
 
-			if err != nil {
-				return math.Inf(-1)
-			}
-			// TODO: will have to manage proportions
-			switch out {
-			case "BUY":
-				maxToBuy := int(funds / p)
-				value := float64(maxToBuy) * p
-				funds -= value
-				holdings += maxToBuy
-			case "SELL":
-				value := float64(holdings) * p
-				funds += value
-				holdings = 0
-			case "HOLD":
-			default:
-			}
-		}
+type GenerationSnapshot struct {
+	Generation   int
+	FinalPrice   float64
+	BuyOrders    int
+	SellOrders   int
+	AvgFitness   float64
+	BestFitness  float64
+	WorstFitness float64
+}
 
-		return funds + prices[len(prices)-1]*float64(holdings)
+func NewMarketState(initialPrice float64) *MarketState {
+	return &MarketState{
+		CurrentPrice:  initialPrice,
+		InitialPrice:  initialPrice,
+		PriceHistory:  []float64{initialPrice},
+		VolumeHistory: []int{},
 	}
+}
+
+func NewMarketHistory() *MarketHistory {
+	return &MarketHistory{
+		Timestamps:  []int{},
+		Prices:      []float64{},
+		Volumes:     []int{},
+		Generations: []GenerationSnapshot{},
+	}
+}
+
+type MarketSimulator struct {
+	Market          *MarketState
+	History         *MarketHistory
+	Grammar         genomes.Grammar
+	InitialFunds    float64
+	InitialHoldings int
+	RoundsPerGen    int
+	generation      int
+}
+
+func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings int, roundsPerGen int) *MarketSimulator {
+	return &MarketSimulator{
+		Market:          NewMarketState(initialPrice),
+		History:         NewMarketHistory(),
+		Grammar:         grammar,
+		InitialFunds:    initialFunds,
+		InitialHoldings: int(initialHoldings),
+		RoundsPerGen:    roundsPerGen,
+		generation:      0,
+	}
+}
+
+func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
+	return func(g genomes.Genotype) float64 {
+		if g.Attributes == nil {
+			return 0
+		}
+
+		funds := 0.0
+		holdings := 0
+
+		if cashVal, ok := g.Attributes["cash"]; ok && cashVal != nil {
+			if f, ok := cashVal.(float64); ok {
+				funds = f
+			}
+		}
+
+		if holdingsVal, ok := g.Attributes["holdings"]; ok && holdingsVal != nil {
+			if h, ok := holdingsVal.(int); ok {
+				holdings = h
+			}
+		}
+
+		portfolioValue := funds + float64(holdings)*ms.Market.CurrentPrice
+
+		roi := (portfolioValue - ms.InitialFunds) / ms.InitialFunds
+
+		return roi
+	}
+
+}
+
+func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
+	totalBuyOrders := 0
+	totalSellOrders := 0
+
+	for round := 0; round < ms.RoundsPerGen; round++ {
+		roundNumber := ms.generation*ms.RoundsPerGen + round
+		var orders []Order
+
+		for i, g := range genotypes {
+			order := ms.generateOrder(&g, i)
+			orders = append(orders, order)
+		}
+
+		buyOrders := 0
+		sellOrders := 0
+		for _, order := range orders {
+			switch order.Action {
+			case "BUY":
+				buyOrders += order.Quantity
+			case "SELL":
+				sellOrders += order.Quantity
+			}
+		}
+
+		totalBuyOrders += buyOrders
+		totalSellOrders += sellOrders
+
+		newPrice := ms.calculateNewPrice(buyOrders, sellOrders)
+
+		for i, order := range orders {
+			ms.executeOrder(&genotypes[i], order, newPrice)
+		}
+
+		ms.Market.CurrentPrice = newPrice
+		ms.Market.PriceHistory = append(ms.Market.PriceHistory, newPrice)
+
+		ms.Market.CurrentRSI = calculateRSI(ms.Market.PriceHistory, 14)
+
+		ms.History.Timestamps = append(ms.History.Timestamps, roundNumber)
+		ms.History.Prices = append(ms.History.Prices, newPrice)
+		ms.History.Volumes = append(ms.History.Volumes, buyOrders+sellOrders)
+	}
+
+	ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
+		Generation: ms.generation,
+		FinalPrice: ms.Market.CurrentPrice,
+		BuyOrders:  totalBuyOrders,
+		SellOrders: totalSellOrders,
+	})
+}
+
+func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
+	totalFitness := 0.0
+	bestFitness := -math.MaxFloat64
+	worstFitness := math.MaxFloat64
+	validCount := 0
+
+	for _, f := range fitnesses {
+		if !math.IsInf(f, 0) && !math.IsNaN(f) {
+			totalFitness += f
+			validCount++
+			if f > bestFitness {
+				bestFitness = f
+			}
+			if f < worstFitness {
+				worstFitness = f
+			}
+		}
+	}
+
+	avgFitness := 0.0
+	if validCount > 0 {
+		avgFitness = totalFitness / float64(validCount)
+	}
+
+	idx := len(ms.History.Generations) - 1
+	ms.History.Generations[idx].AvgFitness = avgFitness
+	ms.History.Generations[idx].BestFitness = bestFitness
+	ms.History.Generations[idx].WorstFitness = worstFitness
+
+	fmt.Printf("\t\tMarket Price: $%.2f, Best: $%.2f, Avg: $%.2f\n",
+		ms.Market.CurrentPrice, bestFitness, avgFitness)
+
+	ms.generation++
+}
+
+func (ms *MarketSimulator) ResetOffspring(offspring []genomes.Genotype) {
+	for i := range offspring {
+		offspring[i].Attributes = make(map[string]interface{})
+		offspring[i].Attributes["cash"] = ms.InitialFunds
+		offspring[i].Attributes["holdings"] = ms.InitialHoldings
+	}
+}
+
+func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
+	if g.Attributes == nil {
+		g.Attributes = make(map[string]interface{})
+		g.Attributes["cash"] = ms.InitialFunds
+		g.Attributes["holdings"] = ms.InitialHoldings
+	}
+
+	funds := ms.InitialFunds
+	holdings := 0
+
+	if cashVal, ok := g.Attributes["cash"]; ok && cashVal != nil {
+		if f, ok := cashVal.(float64); ok {
+			funds = f
+		}
+	}
+
+	if holdingsVal, ok := g.Attributes["holdings"]; ok && holdingsVal != nil {
+		if h, ok := holdingsVal.(int); ok {
+			holdings = h
+		}
+	}
+
+	exprStr := g.MapToGrammar(ms.Grammar, 7).String()
+	// fmt.Println("Evaluating strategy for Genotype", id, ":")
+	// fmt.Println(exprStr)
+	program, err := expr.Compile(exprStr, expr.Env(map[string]interface{}{
+		"$PRICE": 0.0,
+		"$RSI":   0.0,
+	}))
+
+	if err != nil {
+		fmt.Println("Error compiling expression for Genotype", id, ":", err)
+		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
+	}
+
+	out, err := expr.Run(program, map[string]interface{}{
+		"$PRICE": ms.Market.CurrentPrice,
+		"$RSI":   ms.Market.CurrentRSI,
+	})
+
+	// fmt.Println(out)
+
+	if err != nil {
+		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
+	}
+
+	action := "HOLD"
+	if str, ok := out.(string); ok {
+		action = str
+	}
+	var quantity int
+	proportion := 0.20
+	switch action {
+	case "BUY":
+		if funds >= ms.Market.CurrentPrice {
+			quantity = int(funds / ms.Market.CurrentPrice * proportion)
+		}
+	case "SELL":
+		quantity = holdings * int(proportion*100) / 100
+	default:
+		quantity = 0
+	}
+
+	return Order{
+		GenotypeID: id,
+		Action:     action,
+		Quantity:   quantity,
+	}
+}
+
+func (ms *MarketSimulator) calculateNewPrice(buyOrders, sellOrders int) float64 {
+	totalOrders := buyOrders + sellOrders
+
+	if totalOrders == 0 {
+		return ms.Market.CurrentPrice
+	}
+
+	netDemand := buyOrders - sellOrders
+	impactFactor := 0.05
+	priceChange := (float64(netDemand) / float64(totalOrders)) * impactFactor
+
+	fundamentalValue := ms.Market.InitialPrice
+	meanReversionStrength := 0.1
+	meanReversion := (fundamentalValue - ms.Market.CurrentPrice) / ms.Market.CurrentPrice * meanReversionStrength
+
+	newPrice := ms.Market.CurrentPrice * (1.0 + priceChange + meanReversion)
+
+	if newPrice < 1.0 {
+		newPrice = 1.0
+	}
+
+	return newPrice
+}
+
+func (ms *MarketSimulator) executeOrder(g *genomes.Genotype, order Order, executionPrice float64) {
+	funds := g.Attributes["cash"].(float64)
+	holdings := g.Attributes["holdings"].(int)
+
+	switch order.Action {
+	case "BUY":
+		maxAffordable := int(funds / executionPrice)
+		actualQuantity := min(order.Quantity, maxAffordable)
+
+		if actualQuantity > 0 {
+			cost := float64(actualQuantity) * executionPrice
+			funds -= cost
+			holdings += actualQuantity
+		}
+
+	case "SELL":
+		actualQuantity := min(order.Quantity, holdings)
+
+		if actualQuantity > 0 {
+			// fmt.Println("Executing SELL order for Genotype", order.GenotypeID, ": Selling", actualQuantity, "at price", executionPrice)
+			proceeds := float64(actualQuantity) * executionPrice
+			funds += proceeds
+			holdings -= actualQuantity
+		} else {
+			// fmt.Println("No holdings to sell for Genotype", order.GenotypeID)
+		}
+	}
+
+	g.Attributes["cash"] = funds
+	g.Attributes["holdings"] = holdings
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func (mh *MarketHistory) ExportJSON(filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(mh)
+}
+
+func MinPrice(prices []float64) float64 {
+	if len(prices) == 0 {
+		return 0
+	}
+	min := prices[0]
+	for _, p := range prices {
+		if p < min {
+			min = p
+		}
+	}
+	return min
+}
+
+func MaxPrice(prices []float64) float64 {
+	if len(prices) == 0 {
+		return 0
+	}
+	max := prices[0]
+	for _, p := range prices {
+		if p > max {
+			max = p
+		}
+	}
+	return max
+}
+
+func SumVolume(volumes []int) int {
+	sum := 0
+	for _, v := range volumes {
+		sum += v
+	}
+	return sum
+}
+
+func FindBestGeneration(gens []GenerationSnapshot) GenerationSnapshot {
+	if len(gens) == 0 {
+		return GenerationSnapshot{}
+	}
+	best := gens[0]
+	for _, g := range gens {
+		if g.AvgFitness > best.AvgFitness {
+			best = g
+		}
+	}
+	return best
+}
+
+func calculateRSI(prices []float64, period int) float64 {
+	if len(prices) <= period {
+		return 50.0
+	}
+
+	initialGains := 0.0
+	initialLosses := 0.0
+
+	for i := 1; i <= period; i++ {
+		change := prices[i] - prices[i-1]
+		if change > 0 {
+			initialGains += change
+		} else {
+			initialLosses += -change
+		}
+	}
+
+	avgGain := initialGains / float64(period)
+	avgLoss := initialLosses / float64(period)
+
+	for i := period + 1; i < len(prices); i++ {
+
+		change := prices[i] - prices[i-1]
+		currentGain := 0.0
+		currentLoss := 0.0
+
+		if change > 0 {
+			currentGain = change
+		} else {
+			currentLoss = -change
+		}
+
+		avgGain = (avgGain*float64(period-1) + currentGain) / float64(period)
+		avgLoss = (avgLoss*float64(period-1) + currentLoss) / float64(period)
+	}
+
+	rs := 0.0
+	if avgLoss == 0 {
+
+		rs = math.MaxFloat64
+	} else {
+		rs = avgGain / avgLoss
+	}
+
+	rsi := 100.0 - (100.0 / (1.0 + rs))
+	return rsi
 }

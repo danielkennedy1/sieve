@@ -6,6 +6,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+type MarketConfig struct {
+	InitialPrice        float64 `toml:"initial_price"`
+	InitialFunds        float64 `toml:"initial_funds"`
+	RoundsPerGeneration int     `toml:"rounds_per_generation"`
+	InitialHoldings     int     `toml:"initial_holdings"`
+}
 type PopulationConfig struct {
 	Size           int     `mapstructure:"size"`
 	MutationRate   float64 `mapstructure:"mutation_rate"`
@@ -25,6 +31,8 @@ type Config struct {
 	// Population Settings (Nested)
 	Population PopulationConfig `mapstructure:"population"`
 
+	Market MarketConfig `mapstructure:"market"`
+
 	// Evolution Settings (Top level)
 	Generations int `mapstructure:"generations"`
 
@@ -42,7 +50,6 @@ func DefaultConfig() Config {
 		NumVars:                1,
 		NumSamplesToGenerate:   100,
 
-		// Initialize the nested PopulationConfig struct here
 		Population: PopulationConfig{
 			Size:          500,
 			MutationRate:  0.1,
