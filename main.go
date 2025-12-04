@@ -39,21 +39,16 @@ func main() {
 	gr := grammar.Parse(*s)
 	gr.BuildRuleMap()
 
-	initialFunds := 1500.0
-	initialPrice := 100.0
-	initialHoldings := 100
-	roundsPerGen := 100
-
 	simulator := grammar.NewMarketSimulator(
 		gr,
-		initialPrice,
-		initialFunds,
-		initialHoldings,
-		roundsPerGen,
+		config.Market.InitialPrice,
+		config.Market.InitialFunds,
+		config.Market.InitialHoldings,
+		config.Market.RoundsPerGeneration,
 	)
 
 	attributes := make(map[string]any)
-	attributes["cash"] = initialFunds
+	attributes["cash"] = config.Market.InitialFunds
 	attributes["holdings"] = 100
 
 	population := ea.NewPopulation(

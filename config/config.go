@@ -7,10 +7,10 @@ import (
 )
 
 type MarketConfig struct {
-	InitialPrice        float64 `toml:"initial_price"`
-	InitialFunds        float64 `toml:"initial_funds"`
-	RoundsPerGeneration int     `toml:"rounds_per_generation"`
-	InitialHoldings     int     `toml:"initial_holdings"`
+	InitialPrice        float64 `mapstructure:"initial_price"`
+	InitialFunds        float64 `mapstructure:"initial_funds"`
+	RoundsPerGeneration int     `mapstructure:"rounds_per_generation"`
+	InitialHoldings     int     `mapstructure:"initial_holdings"`
 }
 type PopulationConfig struct {
 	Size           int     `mapstructure:"size"`
