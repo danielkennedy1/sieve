@@ -12,6 +12,7 @@ import (
 
 type MarketState struct {
 	CurrentPrice  float64
+	CurrentRSI    float64
 	InitialPrice  float64
 	PriceHistory  []float64
 	VolumeHistory []int
@@ -81,18 +82,32 @@ func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds floa
 func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 	return func(g genomes.Genotype) float64 {
 		if g.Attributes == nil {
-			g.Attributes = make(map[string]interface{})
-			g.Attributes["cash"] = ms.InitialFunds
-			g.Attributes["holdings"] = 0
+			return 0
 		}
 
-		funds := g.Attributes["cash"].(float64)
-		holdings := g.Attributes["holdings"].(int)
+		funds := 0.0
+		holdings := 0
+
+		if cashVal, ok := g.Attributes["cash"]; ok && cashVal != nil {
+			if f, ok := cashVal.(float64); ok {
+				funds = f
+			}
+		}
+
+		if holdingsVal, ok := g.Attributes["holdings"]; ok && holdingsVal != nil {
+			if h, ok := holdingsVal.(int); ok {
+				holdings = h
+			}
+		}
 
 		portfolioValue := funds + float64(holdings)*ms.Market.CurrentPrice
 
-		return portfolioValue
+		// Return ROI instead of absolute value
+		roi := (portfolioValue - ms.InitialFunds) / ms.InitialFunds
+
+		return roi // This normalizes everyone to same starting point
 	}
+
 }
 
 func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
@@ -130,6 +145,8 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 
 		ms.Market.CurrentPrice = newPrice
 		ms.Market.PriceHistory = append(ms.Market.PriceHistory, newPrice)
+
+		ms.Market.CurrentRSI = calculateRSI(ms.Market.PriceHistory, 14) // Assuming you implement this helper function
 
 		ms.History.Timestamps = append(ms.History.Timestamps, roundNumber)
 		ms.History.Prices = append(ms.History.Prices, newPrice)
@@ -210,17 +227,24 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 	}
 
 	exprStr := g.MapToGrammar(ms.Grammar, 7).String()
+	// fmt.Println("Evaluating strategy for Genotype", id, ":")
+	// fmt.Println(exprStr)
 	program, err := expr.Compile(exprStr, expr.Env(map[string]interface{}{
 		"$PRICE": 0.0,
+		"$RSI":   0.0,
 	}))
 
 	if err != nil {
+		fmt.Println("Error compiling expression for Genotype", id, ":", err)
 		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
 	}
 
 	out, err := expr.Run(program, map[string]interface{}{
 		"$PRICE": ms.Market.CurrentPrice,
+		"$RSI":   ms.Market.CurrentRSI,
 	})
+
+	// fmt.Println(out)
 
 	if err != nil {
 		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
@@ -231,13 +255,14 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 		action = str
 	}
 	var quantity int
+	proportion := 0.20
 	switch action {
 	case "BUY":
 		if funds >= ms.Market.CurrentPrice {
-			quantity = int(funds / ms.Market.CurrentPrice)
+			quantity = int(funds / ms.Market.CurrentPrice * proportion)
 		}
 	case "SELL":
-		quantity = holdings
+		quantity = holdings * int(proportion*100) / 100
 	default:
 		quantity = 0
 	}
@@ -292,9 +317,12 @@ func (ms *MarketSimulator) executeOrder(g *genomes.Genotype, order Order, execut
 		actualQuantity := min(order.Quantity, holdings)
 
 		if actualQuantity > 0 {
+			// fmt.Println("Executing SELL order for Genotype", order.GenotypeID, ": Selling", actualQuantity, "at price", executionPrice)
 			proceeds := float64(actualQuantity) * executionPrice
 			funds += proceeds
 			holdings -= actualQuantity
+		} else {
+			// fmt.Println("No holdings to sell for Genotype", order.GenotypeID)
 		}
 	}
 
@@ -366,4 +394,54 @@ func FindBestGeneration(gens []GenerationSnapshot) GenerationSnapshot {
 		}
 	}
 	return best
+}
+
+func calculateRSI(prices []float64, period int) float64 {
+	if len(prices) <= period {
+		return 50.0
+	}
+
+	initialGains := 0.0
+	initialLosses := 0.0
+
+	for i := 1; i <= period; i++ {
+		change := prices[i] - prices[i-1]
+		if change > 0 {
+			initialGains += change
+		} else {
+			initialLosses += -change
+		}
+	}
+
+	avgGain := initialGains / float64(period)
+	avgLoss := initialLosses / float64(period)
+
+	for i := period + 1; i < len(prices); i++ {
+
+		change := prices[i] - prices[i-1]
+		currentGain := 0.0
+		currentLoss := 0.0
+
+		if change > 0 {
+			currentGain = change
+		} else {
+			currentLoss = -change
+		}
+
+		avgGain = (avgGain*float64(period-1) + currentGain) / float64(period)
+		avgLoss = (avgLoss*float64(period-1) + currentLoss) / float64(period)
+	}
+
+	rs := 0.0
+	if avgLoss == 0 {
+
+		rs = math.MaxFloat64
+	} else {
+		rs = avgGain / avgLoss
+	}
+
+	// Step 4: Calculate Relative Strength Index (RSI)
+	rsi := 100.0 - (100.0 / (1.0 + rs))
+
+	return rsi
 }

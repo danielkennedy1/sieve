@@ -50,7 +50,7 @@ func main() {
 		prices = append(prices, val)
 	}
 
-	initialFunds := 30000.0
+	initialFunds := 1000.0
 	initialPrice := 450.0
 	roundsPerGen := 10
 
@@ -63,7 +63,7 @@ func main() {
 
 	attributes := make(map[string]any)
 	attributes["cash"] = initialFunds
-	attributes["holdings"] = 1000
+	attributes["holdings"] = 100
 
 	population := ea.NewPopulation(
 		config.Population.Size,
