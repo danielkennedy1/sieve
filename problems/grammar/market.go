@@ -236,11 +236,11 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 	exprStr := g.MapToGrammar(ms.Grammar, 7).String()
 	// fmt.Println("Evaluating strategy for Genotype", id, ":")
 	// fmt.Println(exprStr)
-	program, err := expr.Compile(exprStr, expr.Env(map[string]interface{}{
+	program, err := expr.Compile(exprStr, expr.Env(map[string]any{
 		"$PRICE":    0.0,
 		"$RSI":      0.0,
 		"$CASH":     0.0,
-		"$HOLDINGS": 0,
+		"$HOLDINGS": 0.0,
 		"$VOLUME":   0,
 		"$ATR":      0.0,
 		"$SMA":      0.0,
@@ -251,7 +251,7 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
 	}
 
-	out, err := expr.Run(program, map[string]interface{}{
+	out, err := expr.Run(program, map[string]any{
 		"$PRICE":    ms.Market.CurrentPrice,
 		"$RSI":      ms.Market.CurrentRSI,
 		"$CASH":     funds,
