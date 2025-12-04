@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"runtime/pprof"
+
 	"github.com/danielkennedy1/sieve/config"
 	"github.com/danielkennedy1/sieve/ea"
 	"github.com/danielkennedy1/sieve/genomes"
@@ -16,19 +18,24 @@ import (
 
 func main() {
 	config, err := config.LoadConfig("nyse")
+
+	f, _ := os.Create("cpu.prof")
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+
 	if err != nil {
 		fmt.Printf("Fatal error loading configuration: %v\n", err)
 		os.Exit(1)
 	}
 
-	f, err := os.Open(config.BNFFilePath)
+	f, err = os.Open(config.BNFFilePath)
 	if err != nil {
 		fmt.Printf("File not found: %s\n", config.BNFFilePath)
 		os.Exit(1)
 	}
 	defer f.Close()
 
-	r := rand.New(rand.NewPCG(0, 0))
+	r := rand.New(rand.NewPCG(1, 1))
 	s := bufio.NewScanner(f)
 	gr := grammar.Parse(*s)
 	gr.BuildRuleMap()
