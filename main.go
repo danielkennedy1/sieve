@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"os"
-	"strconv"
 	"time"
 
 	"runtime/pprof"
@@ -17,7 +16,7 @@ import (
 )
 
 func main() {
-	config, err := config.LoadConfig("nyse")
+	config, err := config.LoadConfig("market")
 
 	f, _ := os.Create("cpu.prof")
 	pprof.StartCPUProfile(f)
@@ -40,38 +39,16 @@ func main() {
 	gr := grammar.Parse(*s)
 	gr.BuildRuleMap()
 
-	f, err = os.Open("data/dominoes.txt")
-	if err != nil {
-		fmt.Println("Prices file not found")
-		os.Exit(1)
-	}
-	defer f.Close()
-
-	var prices []float64
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		val, err := strconv.ParseFloat(scanner.Text(), 64)
-		if err != nil {
-			continue
-		}
-		prices = append(prices, val)
-	}
-
-	initialFunds := 1500.0
-	initialPrice := 100.0
-	initialHoldings := 100
-	roundsPerGen := 100
-
 	simulator := grammar.NewMarketSimulator(
 		gr,
-		initialPrice,
-		initialFunds,
-		initialHoldings,
-		roundsPerGen,
+		config.Market.InitialPrice,
+		config.Market.InitialFunds,
+		config.Market.InitialHoldings,
+		config.Market.RoundsPerGeneration,
 	)
 
 	attributes := make(map[string]any)
-	attributes["cash"] = initialFunds
+	attributes["cash"] = config.Market.InitialFunds
 	attributes["holdings"] = 100
 
 	population := ea.NewPopulation(
