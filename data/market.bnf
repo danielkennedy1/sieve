@@ -3,6 +3,6 @@
 <comp> ::= > | < | ==
 <numeric> ::= ( <condition> ? <numeric> : <numeric> ) | ( <numeric> <op> <numeric> ) | ( <val> )
 <op> ::= + | - | * | /
-<val> ::= $PRICE | $RSI
+<val> ::= $PRICE | $RSI | <const>
 <proportion> ::= 0.0..1.0
 <const> ::= 25..75
