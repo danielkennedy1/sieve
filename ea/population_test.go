@@ -53,6 +53,7 @@ func BenchmarkGrammarEvolveSmall(b *testing.B) {
 			func(g genomes.Genotype) string {
 				return g.MapToGrammar(testGrammar, 100).String()
 			},
+			true,
 		)
 		pop.Evolve(10) // fewer generations for benchmarking
 	}
@@ -76,6 +77,7 @@ func BenchmarkGrammarEvolveFull(b *testing.B) {
 			func(g genomes.Genotype) string {
 				return g.MapToGrammar(testGrammar, 100).String()
 			},
+			true,
 		)
 		pop.Evolve(50) // Use fewer generations than your full 400 for benchmarking
 	}
@@ -98,6 +100,7 @@ func BenchmarkGrammarEvaluateAll(b *testing.B) {
 		func(g genomes.Genotype) string {
 			return g.MapToGrammar(testGrammar, 100).String()
 		},
+		true,
 	)
 
 	b.ResetTimer()
@@ -140,6 +143,7 @@ func benchmarkWithPopSize(b *testing.B, popSize int) {
 			func(g genomes.Genotype) string {
 				return g.MapToGrammar(testGrammar, 100).String()
 			},
+			true,
 		)
 		pop.Evolve(10)
 	}
