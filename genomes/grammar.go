@@ -107,21 +107,36 @@ type Genotype struct {
 
 func (gr Grammar) getTerminatingProductionIndex(rule *Rule) int {
 	bestIndex := 0
-	minNonTerminals := 99999
+	minRecursiveRefs := 99999
+	minTotalNonTerminals := 99999
 
 	for i, prod := range rule.Productions {
-		count := 0
+		recursiveRefs := 0
+		totalNonTerminals := 0
+
 		for _, e := range prod.Elements {
 			if isNonTerminal(e) {
-				count++
+				totalNonTerminals++
+
+				if e == rule.Left {
+					recursiveRefs++
+				}
 			}
 		}
-		// Prefer fewer non-terminals to stop recursion
-		if count < minNonTerminals {
-			minNonTerminals = count
+
+		if recursiveRefs < minRecursiveRefs {
+			minRecursiveRefs = recursiveRefs
+			minTotalNonTerminals = totalNonTerminals
 			bestIndex = i
+		} else if recursiveRefs == minRecursiveRefs {
+			if totalNonTerminals < minTotalNonTerminals {
+				minTotalNonTerminals = totalNonTerminals
+				bestIndex = i
+			}
 		}
+
 	}
+
 	return bestIndex
 }
 
