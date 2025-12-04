@@ -104,10 +104,9 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 
 		portfolioValue := funds + float64(holdings)*ms.Market.CurrentPrice
 
-		// Return ROI instead of absolute value
 		roi := (portfolioValue - ms.InitialFunds) / ms.InitialFunds
 
-		return roi // This normalizes everyone to same starting point
+		return roi
 	}
 
 }
@@ -148,7 +147,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		ms.Market.CurrentPrice = newPrice
 		ms.Market.PriceHistory = append(ms.Market.PriceHistory, newPrice)
 
-		ms.Market.CurrentRSI = calculateRSI(ms.Market.PriceHistory, 14) // Assuming you implement this helper function
+		ms.Market.CurrentRSI = calculateRSI(ms.Market.PriceHistory, 14)
 
 		ms.History.Timestamps = append(ms.History.Timestamps, roundNumber)
 		ms.History.Prices = append(ms.History.Prices, newPrice)
@@ -442,7 +441,6 @@ func calculateRSI(prices []float64, period int) float64 {
 		rs = avgGain / avgLoss
 	}
 
-	// Step 4: Calculate Relative Strength Index (RSI)
 	rsi := 100.0 - (100.0 / (1.0 + rs))
 	return rsi
 }
