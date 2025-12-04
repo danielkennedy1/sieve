@@ -199,7 +199,7 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 
 func (ms *MarketSimulator) ResetOffspring(offspring []genomes.Genotype) {
 	for i := range offspring {
-		offspring[i].Attributes = make(map[string]interface{})
+		offspring[i].Attributes = make(map[string]any)
 		offspring[i].Attributes["cash"] = ms.InitialFunds
 		offspring[i].Attributes["holdings"] = ms.InitialHoldings
 	}
@@ -437,7 +437,6 @@ func calculateRSI(prices []float64, period int) float64 {
 
 	rs := 0.0
 	if avgLoss == 0 {
-
 		rs = math.MaxFloat64
 	} else {
 		rs = avgGain / avgLoss
