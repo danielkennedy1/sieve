@@ -13,6 +13,9 @@ import (
 type MarketState struct {
 	CurrentPrice  float64
 	CurrentRSI    float64
+	CurrentVolume int
+	CurrentATR    float64
+	CurrentSMA    float64
 	InitialPrice  float64
 	PriceHistory  []float64
 	VolumeHistory []int
@@ -148,6 +151,9 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		ms.Market.PriceHistory = append(ms.Market.PriceHistory, newPrice)
 
 		ms.Market.CurrentRSI = calculateRSI(ms.Market.PriceHistory, 14)
+		ms.Market.CurrentVolume = buyOrders + sellOrders
+		ms.Market.CurrentATR = calculateATR(ms.Market.PriceHistory, 20)
+		ms.Market.CurrentSMA = calculateSMA(ms.Market.PriceHistory, 14)
 
 		ms.History.Timestamps = append(ms.History.Timestamps, roundNumber)
 		ms.History.Prices = append(ms.History.Prices, newPrice)
@@ -231,8 +237,13 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 	// fmt.Println("Evaluating strategy for Genotype", id, ":")
 	// fmt.Println(exprStr)
 	program, err := expr.Compile(exprStr, expr.Env(map[string]interface{}{
-		"$PRICE": 0.0,
-		"$RSI":   0.0,
+		"$PRICE":    0.0,
+		"$RSI":      0.0,
+		"$CASH":     0.0,
+		"$HOLDINGS": 0,
+		"$VOLUME":   0,
+		"$ATR":      0.0,
+		"$SMA":      0.0,
 	}))
 
 	if err != nil {
@@ -241,8 +252,13 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 	}
 
 	out, err := expr.Run(program, map[string]interface{}{
-		"$PRICE": ms.Market.CurrentPrice,
-		"$RSI":   ms.Market.CurrentRSI,
+		"$PRICE":    ms.Market.CurrentPrice,
+		"$RSI":      ms.Market.CurrentRSI,
+		"$CASH":     funds,
+		"$HOLDINGS": holdings,
+		"$VOLUME":   ms.Market.CurrentVolume,
+		"$ATR":      ms.Market.CurrentATR,
+		"$SMA":      ms.Market.CurrentSMA,
 	})
 
 	// fmt.Println(out)
@@ -329,13 +345,6 @@ func (ms *MarketSimulator) executeOrder(g *genomes.Genotype, order Order, execut
 
 	g.Attributes["cash"] = funds
 	g.Attributes["holdings"] = holdings
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func (mh *MarketHistory) ExportJSON(filename string) error {
@@ -443,4 +452,41 @@ func calculateRSI(prices []float64, period int) float64 {
 
 	rsi := 100.0 - (100.0 / (1.0 + rs))
 	return rsi
+}
+
+func calculateSMA(prices []float64, period int) float64 {
+	if len(prices) < period {
+		if len(prices) > 0 {
+			return prices[len(prices)-1]
+		}
+		return 0.0
+	}
+
+	sum := 0.0
+	startIdx := len(prices) - period
+	for i := startIdx; i < len(prices); i++ {
+		sum += prices[i]
+	}
+
+	return sum / float64(period)
+}
+
+func calculateATR(prices []float64, period int) float64 {
+	if len(prices) <= period {
+		return 0.0
+	}
+
+	sumTR := 0.0
+	for i := 1; i <= period; i++ {
+		tr := math.Abs(prices[i] - prices[i-1])
+		sumTR += tr
+	}
+	atr := sumTR / float64(period)
+
+	for i := period + 1; i < len(prices); i++ {
+		currentTR := math.Abs(prices[i] - prices[i-1])
+		atr = ((atr * float64(period-1)) + currentTR) / float64(period)
+	}
+
+	return atr
 }
