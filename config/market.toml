@@ -1,14 +1,14 @@
-generations = 100
+generations = 50
 
-max_genes = 15 
+max_genes = 15
 
 bnf_file_path = "data/market.bnf"
 
 [market]
 initial_funds = 1500.0
 initial_price = 100.0
-initial_holdings = 100
-rounds_per_generation = 100
+initial_holdings = 0
+rounds_per_generation = 1000
 
 # Population Settings
 [population]
