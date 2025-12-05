@@ -19,6 +19,7 @@ type Population[G any] struct {
 	mutationRate  float64
 	eliteCount    int
 	numWorkers    int
+	cacheBoolean  bool
 
 	cache      map[string]float64
 	cacheMutex sync.RWMutex
@@ -40,6 +41,7 @@ func NewPopulation[G any](
 	mutate func(G) G,
 	selector func([]float64, int) []int,
 	toKey func(G) string,
+	cacheBoolean bool,
 ) *Population[G] {
 	genomes := make([]G, size)
 	for i := range genomes {
@@ -59,6 +61,7 @@ func NewPopulation[G any](
 		numWorkers:    numWorkers,
 		cache:         make(map[string]float64),
 		toKey:         toKey,
+		cacheBoolean:  cacheBoolean,
 	}
 }
 
@@ -71,23 +74,27 @@ func (p *Population[G]) evaluateAll() {
 		go func() {
 			defer wg.Done()
 			for idx := range jobs {
-				key := p.toKey(p.genomes[idx])
+				if p.cacheBoolean {
+					key := p.toKey(p.genomes[idx])
 
-				// Check cache first (read lock)
-				p.cacheMutex.RLock()
-				fitness, exists := p.cache[key]
-				p.cacheMutex.RUnlock()
+					// Check cache first (read lock)
+					p.cacheMutex.RLock()
+					fitness, exists := p.cache[key]
+					p.cacheMutex.RUnlock()
+					if exists {
+						p.fitnesses[idx] = fitness
+						continue
+					}
 
-				if exists {
-					p.fitnesses[idx] = fitness
-				} else {
-					// Evaluate and store in cache (write lock)
 					fitness = p.evaluate(p.genomes[idx])
 					p.fitnesses[idx] = fitness
 
 					p.cacheMutex.Lock()
 					p.cache[key] = fitness
 					p.cacheMutex.Unlock()
+				} else {
+					fitness := p.evaluate(p.genomes[idx])
+					p.fitnesses[idx] = fitness
 				}
 			}
 		}()

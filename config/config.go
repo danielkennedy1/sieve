@@ -20,6 +20,7 @@ type PopulationConfig struct {
 	GeneLength     int     `mapstructure:"gene_length"`
 	TournamentSize int     `mapstructure:"tournament_size"`
 	EliteCount     int     `mapstructure:"elite_count"`
+	CacheBoolean   bool    `mapstructure:"cache_boolean"`
 }
 
 type Config struct {

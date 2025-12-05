@@ -19,3 +19,4 @@ max_depth = 3
 gene_length = 100
 tournament_size = 7
 elite_count = 1
+cache_boolean = false
