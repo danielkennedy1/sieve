@@ -34,7 +34,7 @@ func main() {
 	}
 	defer f.Close()
 
-	r := rand.New(rand.NewPCG(1, 1))
+	r := rand.New(rand.NewPCG(200, 150))
 	s := bufio.NewScanner(f)
 	gr := grammar.Parse(*s)
 	gr.BuildRuleMap()
@@ -45,6 +45,7 @@ func main() {
 		config.Market.InitialFunds,
 		config.Market.InitialHoldings,
 		config.Market.RoundsPerGeneration,
+		config.MaxGenes,
 	)
 
 	attributes := make(map[string]any)

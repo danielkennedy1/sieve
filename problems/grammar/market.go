@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/danielkennedy1/sieve/genomes"
 	"github.com/expr-lang/expr"
@@ -63,17 +65,19 @@ type MarketSimulator struct {
 	Market          *MarketState
 	History         *MarketHistory
 	Grammar         genomes.Grammar
+	MaxGenes 		int
 	InitialFunds    float64
 	InitialHoldings int
 	RoundsPerGen    int
 	generation      int
 }
 
-func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings int, roundsPerGen int) *MarketSimulator {
+func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings, roundsPerGen, maxGenes int) *MarketSimulator {
 	return &MarketSimulator{
 		Market:          NewMarketState(initialPrice),
 		History:         NewMarketHistory(),
 		Grammar:         grammar,
+		MaxGenes:  	     maxGenes,
 		InitialFunds:    initialFunds,
 		InitialHoldings: int(initialHoldings),
 		RoundsPerGen:    roundsPerGen,
@@ -102,63 +106,75 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 			}
 		}
 
-		portfolioValue := funds + float64(holdings)*ms.Market.CurrentPrice
+		portfolioValue := funds + float64(holdings) * ms.Market.CurrentPrice
 
-		roi := (portfolioValue - ms.InitialFunds) / ms.InitialFunds
-
-		return roi
+		return portfolioValue / ms.InitialFunds
 	}
 
 }
 
 func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
-	totalBuyOrders := 0
-	totalSellOrders := 0
+	totalBuyVolume := 0
+	totalSellVolume := 0
+
+
+	strategies := make([]string, len(genotypes))
+
+	for i, g := range genotypes {
+		strategies[i] = g.MapToGrammar(ms.Grammar, ms.MaxGenes).String()
+	}
+
+	p := ms.Market.InitialPrice
+	rsi := 50.0
+
+	for _, g := range genotypes {
+		g.Attributes["cash"] = ms.InitialFunds
+		g.Attributes["holdings"] = ms.InitialHoldings
+	}
 
 	for round := 0; round < ms.RoundsPerGen; round++ {
-		roundNumber := ms.generation*ms.RoundsPerGen + round
 		var orders []Order
 
 		for i, g := range genotypes {
-			order := ms.generateOrder(&g, i)
+			order := ms.generateOrder(&g, i, strategies[i], p, rsi)
 			orders = append(orders, order)
 		}
 
-		buyOrders := 0
-		sellOrders := 0
+		buyVolume := 0
+		sellVolume := 0
 		for _, order := range orders {
 			switch order.Action {
 			case "BUY":
-				buyOrders += order.Quantity
+				buyVolume += order.Quantity
 			case "SELL":
-				sellOrders += order.Quantity
+				sellVolume += order.Quantity
 			}
 		}
 
-		totalBuyOrders += buyOrders
-		totalSellOrders += sellOrders
+		totalBuyVolume += buyVolume
+		totalSellVolume += sellVolume
 
-		newPrice := ms.calculateNewPrice(buyOrders, sellOrders)
+		p = ms.calculateNewPrice(buyVolume, sellVolume)
 
 		for i, order := range orders {
-			ms.executeOrder(&genotypes[i], order, newPrice)
+			ms.executeOrder(&genotypes[i], order, p)
 		}
 
-		ms.Market.CurrentPrice = newPrice
-		ms.Market.PriceHistory = append(ms.Market.PriceHistory, newPrice)
+		ms.Market.CurrentPrice = p
+		ms.Market.PriceHistory = append(ms.Market.PriceHistory, p)
 
-		ms.Market.CurrentRSI = calculateRSI(ms.Market.PriceHistory, 14)
+		rsi = calculateRSI(ms.Market.PriceHistory, 14)
 
-		ms.History.Timestamps = append(ms.History.Timestamps, roundNumber)
-		ms.History.Prices = append(ms.History.Prices, newPrice)
-		ms.History.Volumes = append(ms.History.Volumes, buyOrders+sellOrders)
+		ms.History.Timestamps = append(ms.History.Timestamps, ms.generation * ms.RoundsPerGen + round)
+		ms.History.Prices = append(ms.History.Prices, p)
+		ms.History.Volumes = append(ms.History.Volumes, buyVolume + sellVolume)
 	}
 
 	ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
 		Generation: ms.generation,
-		FinalPrice: ms.Market.CurrentPrice,
-		BuyOrders:  totalBuyOrders,
-		SellOrders: totalSellOrders,
+		FinalPrice: p,
+		BuyOrders:  totalBuyVolume,
+		SellOrders: totalSellVolume,
 	})
 }
 
@@ -205,7 +221,7 @@ func (ms *MarketSimulator) ResetOffspring(offspring []genomes.Genotype) {
 	}
 }
 
-func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
+func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int, strategy string, price, rsi float64) Order {
 	if g.Attributes == nil {
 		g.Attributes = make(map[string]interface{})
 		g.Attributes["cash"] = ms.InitialFunds
@@ -227,14 +243,9 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 		}
 	}
 
-	exprStr := g.MapToGrammar(ms.Grammar, 7).String()
 	// fmt.Println("Evaluating strategy for Genotype", id, ":")
 	// fmt.Println(exprStr)
-	program, err := expr.Compile(exprStr, expr.Env(map[string]any{
-		"$PRICE": 0.0,
-		"$RSI":   0.0,
-		"$HOLDINGS":   0.0,
-	}))
+	program, err := expr.Compile(strategy)
 
 	if err != nil {
 		fmt.Println("Error compiling expression for Genotype", id, ":", err)
@@ -242,8 +253,8 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 	}
 
 	out, err := expr.Run(program, map[string]any{
-		"$PRICE": ms.Market.CurrentPrice,
-		"$RSI":   ms.Market.CurrentRSI,
+		"$PRICE": price,
+		"$RSI":   rsi,
 		"$HOLDINGS":   holdings,
 	})
 
@@ -253,12 +264,33 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int) Order {
 		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
 	}
 
-	action := "HOLD"
-	if str, ok := out.(string); ok {
-		action = str
+
+	str, ok := out.(string)
+
+	if !ok {
+		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
 	}
+
+	elements := strings.Split(strings.Trim(str, " "), " ")
+
+	action := elements[0]
+
+	if action == "HOLD" {
+		return Order{
+			GenotypeID: id,
+			Action: "HOLD",
+			Quantity: 0,
+		}
+	}
+	
 	var quantity int
-	proportion := 0.20
+
+	proportion, err := strconv.ParseFloat(elements[1], 64)
+
+	if err != nil {
+		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
+	}
+
 	switch action {
 	case "BUY":
 		if funds >= ms.Market.CurrentPrice {
@@ -289,7 +321,7 @@ func (ms *MarketSimulator) calculateNewPrice(buyOrders, sellOrders int) float64 
 	priceChange := (float64(netDemand) / float64(totalOrders)) * impactFactor
 
 	fundamentalValue := ms.Market.InitialPrice
-	meanReversionStrength := 0.1
+	meanReversionStrength := 0.0
 	meanReversion := (fundamentalValue - ms.Market.CurrentPrice) / ms.Market.CurrentPrice * meanReversionStrength
 
 	newPrice := ms.Market.CurrentPrice * (1.0 + priceChange + meanReversion)

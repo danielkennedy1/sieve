@@ -1,5 +1,5 @@
-<strategy> ::= <condition> ? ( "SELL" ) : ( <condition> ? ( "BUY" ) : ( "HOLD" ) )
-<condition> ::= ( <condition> <logic> <condition> ) | ( <val> <comp> <val> )
+<strategy> ::= <condition> ? ( " SELL <decimal> " ) : ( <condition> ? ( " BUY <decimal> " ) : ( " HOLD " ) )
+<condition> ::= ( <condition> <logic> <condition> ) | ( <val> <comp> <val> ) | true | false
 <comp> ::= > | < | ==
 <op> ::= + | - | * | /
 <val> ::= <var> | <num>
