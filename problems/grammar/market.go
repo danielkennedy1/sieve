@@ -68,7 +68,7 @@ type MarketSimulator struct {
 	Market          *MarketState
 	History         *MarketHistory
 	Grammar         genomes.Grammar
-	MaxGenes 		int
+	MaxGenes        int
 	InitialFunds    float64
 	InitialHoldings int
 	RoundsPerGen    int
@@ -80,7 +80,7 @@ func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds floa
 		Market:          NewMarketState(initialPrice),
 		History:         NewMarketHistory(),
 		Grammar:         grammar,
-		MaxGenes:  	     maxGenes,
+		MaxGenes:        maxGenes,
 		InitialFunds:    initialFunds,
 		InitialHoldings: int(initialHoldings),
 		RoundsPerGen:    roundsPerGen,
@@ -109,7 +109,7 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 			}
 		}
 
-		portfolioValue := funds + float64(holdings) * ms.Market.CurrentPrice
+		portfolioValue := funds + float64(holdings)*ms.Market.CurrentPrice
 
 		return portfolioValue / ms.InitialFunds
 	}
@@ -119,7 +119,6 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 	totalBuyVolume := 0
 	totalSellVolume := 0
-
 
 	strategies := make([]string, len(genotypes))
 
@@ -168,13 +167,13 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 
 		rsi = calculateRSI(ms.Market.PriceHistory, 14)
 		ms.Market.CurrentRSI = calculateRSI(ms.Market.PriceHistory, 14)
-		ms.Market.CurrentVolume = buyOrders + sellOrders
+		ms.Market.CurrentVolume = buyVolume + sellVolume
 		ms.Market.CurrentATR = calculateATR(ms.Market.PriceHistory, 20)
 		ms.Market.CurrentSMA = calculateSMA(ms.Market.PriceHistory, 14)
 
-		ms.History.Timestamps = append(ms.History.Timestamps, ms.generation * ms.RoundsPerGen + round)
+		ms.History.Timestamps = append(ms.History.Timestamps, ms.generation*ms.RoundsPerGen+round)
 		ms.History.Prices = append(ms.History.Prices, p)
-		ms.History.Volumes = append(ms.History.Volumes, buyVolume + sellVolume)
+		ms.History.Volumes = append(ms.History.Volumes, buyVolume+sellVolume)
 	}
 
 	ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
@@ -275,7 +274,6 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int, strategy s
 		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
 	}
 
-
 	str, ok := out.(string)
 
 	if !ok {
@@ -289,11 +287,11 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int, strategy s
 	if action == "HOLD" {
 		return Order{
 			GenotypeID: id,
-			Action: "HOLD",
-			Quantity: 0,
+			Action:     "HOLD",
+			Quantity:   0,
 		}
 	}
-	
+
 	var quantity int
 
 	proportion, err := strconv.ParseFloat(elements[1], 64)
