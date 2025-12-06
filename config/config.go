@@ -11,6 +11,7 @@ type MarketConfig struct {
 	InitialFunds        float64 `mapstructure:"initial_funds"`
 	RoundsPerGeneration int     `mapstructure:"rounds_per_generation"`
 	InitialHoldings     int     `mapstructure:"initial_holdings"`
+	NoiseOrdersPerRound int     `mapstructure:"noise_orders_per_round"`
 }
 type PopulationConfig struct {
 	Size           int     `mapstructure:"size"`

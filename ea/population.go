@@ -237,7 +237,6 @@ func (p *Population[G]) Best() (G, float64) {
 	// fmt.Println(len(p.fitnesses))
 
 	for i, f := range p.fitnesses {
-		fmt.Println("Fitness", i, ":", f)
 		if math.IsInf(f, 0) {
 			continue
 		}
