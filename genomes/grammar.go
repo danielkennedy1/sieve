@@ -1,6 +1,7 @@
 package genomes
 
 import (
+	"maps"
 	"math/rand/v2"
 	"sort"
 	"strings"
@@ -260,17 +261,22 @@ func BuildVarMapFromGrammar(gr Grammar) map[string]int {
 
 func NewCreateGenotype(length int, rng *rand.Rand, options ...map[string]any) func() Genotype {
 
-	var attributes map[string]any
+	var universalAttributes map[string]any
 	if len(options) > 0 {
-		attributes = options[0]
+		universalAttributes = options[0]
 	}
 
+	id := 0
 	return func() Genotype {
+		attrs := make(map[string]any, len(universalAttributes))
+
+		maps.Copy(universalAttributes, attrs)
+		attrs["id"] = int(id)
+		id++
 		genes := make([]uint8, length)
-		for i := 0; i < length; i++ {
+		for i := range length {
 			genes[i] = uint8(rng.IntN(256))
 		}
-
-		return Genotype{Genes: genes, Attributes: attributes}
+		return Genotype{Genes: genes, Attributes: attrs}
 	}
 }

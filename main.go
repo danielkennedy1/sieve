@@ -39,19 +39,21 @@ func main() {
 	gr := grammar.Parse(*s)
 	gr.BuildRuleMap()
 
-	simulator := grammar.NewMarketSimulator(
-		gr,
-		r,
-		config.Market.InitialPrice,
-		config.Market.InitialFunds,
-		config.Market.InitialHoldings,
-		config.Market.RoundsPerGeneration,
-		config.MaxGenes,
-	)
-
+	simulator := &grammar.MarketSimulator{
+		FinalState: nil,
+		Config: &grammar.MarketConfig{
+			Grammar:         gr,
+			MaxGenes:        config.MaxGenes,
+			InitialPrice:    config.Market.InitialPrice,
+			InitialFunds:    config.Market.InitialFunds,
+			InitialHoldings: config.Market.InitialHoldings,
+			RoundsPerGen:    config.Market.RoundsPerGeneration,
+		},
+		History:    &grammar.MarketHistory{},
+		Rng:        r,
+		Generation: 0,
+	}
 	attributes := make(map[string]any)
-	attributes["cash"] = config.Market.InitialFunds
-	attributes["holdings"] = 100
 
 	population := ea.NewPopulation(
 		config.Population.Size,
@@ -71,7 +73,6 @@ func main() {
 
 	population.BeforeEvaluate = simulator.BeforeGeneration
 	population.AfterEvaluate = simulator.AfterGeneration
-	population.AfterSelection = simulator.ResetOffspring
 
 	start := time.Now()
 	population.Evolve(config.Generations)
@@ -81,9 +82,9 @@ func main() {
 	fmt.Printf("\n=== Results ===\n")
 	fmt.Printf("Best fitness: $%.2f\n", fitness)
 	fmt.Printf("Best strategy: %s\n", best.MapToGrammar(gr, 100).String())
-	fmt.Printf("Final market price: $%.2f\n", simulator.Market.FinalPrice)
+	fmt.Printf("Final market price: $%.2f\n", simulator.FinalState.Price)
 	fmt.Printf("Price change: %.2f%%\n",
-		(simulator.Market.FinalPrice-simulator.Market.InitialPrice)/simulator.Market.InitialPrice*100)
+		(simulator.FinalState.Price-simulator.Config.InitialPrice)/simulator.Config.InitialPrice*100)
 	fmt.Printf("Elapsed time: %s\n", elapsed)
 
 	err = simulator.History.ExportJSON("market_history.json")
