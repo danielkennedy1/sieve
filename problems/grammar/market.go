@@ -22,7 +22,8 @@ type MarketState struct {
 	PriceHistory  []float64
 	VolumeHistory []int
 	TradesPerActor []int
-	FundamentalValue float64
+	FinalFundamentalValue float64
+	BuyAndHoldPortfolioValue float64
 }
 
 type Order struct {
@@ -115,10 +116,11 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 			}
 		}
 
-		return funds + holdings * ms.Market.FinalPrice
+		return (funds + holdings * ms.Market.FinalPrice) - ms.Market.BuyAndHoldPortfolioValue
 	}
 
 }
+
 
 func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 	totalBuyVolume := 0
@@ -133,8 +135,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 	p := ms.Market.InitialPrice
 	rsi := 50.0
 
-	f := ms.Market.InitialPrice + (ms.Market.InitialPrice * (ms.Rng.Float64()))
-	ms.Market.FundamentalValue = f
+	f := ms.Market.InitialPrice + (ms.Market.InitialPrice * (ms.Rng.Float64() - 0.5))
 
 	tradesPerActor := make([]int, len(genotypes))
 
@@ -144,16 +145,22 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 	}
 
 	for round := 0; round < ms.RoundsPerGen; round++ {
-		var orders []Order
+
+		// Regime change, new fundamental value
+		if round == ms.RoundsPerGen / 2 {
+			f = ms.Market.InitialPrice + (ms.Market.InitialPrice * (ms.Rng.Float64() - 0.5))
+		}
+
+		realOrders := make([]Order, len(genotypes))
 
 		for i, g := range genotypes {
 			order := ms.generateOrder(&g, i, strategies[i], p, rsi, float64(round) / float64(ms.RoundsPerGen))
-			orders = append(orders, order)
+			realOrders[i] = order
 		}
 
 		buyVolume := 0
 		sellVolume := 0
-		for _, order := range orders {
+		for _, order := range realOrders {
 			switch order.Action {
 			case "BUY":
 				buyVolume += order.Quantity
@@ -165,9 +172,13 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		totalBuyVolume += buyVolume
 		totalSellVolume += sellVolume
 
+		noiseOrders := ms.generateNoiseOrders(0)
+
+		orders := append(realOrders, noiseOrders...)
+
 		p = calculateNewPrice(p, orders, f)
 
-		for i, order := range orders {
+		for i, order := range realOrders {
 			ms.executeOrder(&genotypes[i], order, p, &tradesPerActor[i])
 		}
 
@@ -184,6 +195,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		ms.History.Prices = append(ms.History.Prices, p)
 		ms.History.Volumes = append(ms.History.Volumes, buyVolume+sellVolume)
 	}
+	ms.Market.FinalFundamentalValue = f
 	ms.Market.FinalPrice = p
 
 	ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
@@ -213,6 +225,8 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 			}
 		}
 	}
+
+	ms.Market.BuyAndHoldPortfolioValue = ms.InitialFunds + p * float64(ms.InitialHoldings)
 
 	fmt.Println("Best Individual: ", genotypes[bestFitnessIdx].MapToGrammar(ms.Grammar, ms.MaxGenes).String())
 
@@ -247,7 +261,7 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 	ms.History.Generations[idx].BestFitness = bestFitness
 	ms.History.Generations[idx].WorstFitness = worstFitness
 
-	fmt.Printf("\t\tMarket Price: $%.2f, Fundamental Value: $%.2f, Best fitness: %.2f, Avg fitness: %.2f\n", ms.Market.FinalPrice, ms.Market.FundamentalValue, bestFitness, avgFitness)
+	fmt.Printf("\t\tMarket Price: $%.2f, Fundamental Value: $%.2f, Best fitness: %.2f, Avg fitness: %.2f\n", ms.Market.FinalPrice, ms.Market.FinalFundamentalValue, bestFitness, avgFitness)
 
 	ms.generation++
 }
@@ -300,7 +314,7 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int, strategy s
 		"$VOLUME":   ms.Market.CurrentVolume,
 		"$ATR":      ms.Market.CurrentATR,
 		"$SMA":      ms.Market.CurrentSMA,
-		"$FUNDAMENTAL": ms.Market.FundamentalValue,
+		"$FUNDAMENTAL": ms.Market.FinalFundamentalValue,
 	})
 
 	// fmt.Println(out)
@@ -560,4 +574,31 @@ func calculateATR(prices []float64, period int) float64 {
 	}
 
 	return atr
+}
+
+func (ms MarketSimulator) generateNoiseOrders(count int) []Order {
+    orders := make([]Order, count)
+
+	direction := ms.Rng.Float64()
+
+    for i := 0; i < count; i++ {
+        action := "HOLD"
+        quantity := 0
+        
+        r := ms.Rng.Float64()
+        if r < direction {  // 40% buy
+            action = "SELL"
+            quantity = ms.Rng.IntN(10) + 5  // 5-15 units
+        } else {  // 40% sell
+            action = "BUY"
+            quantity = ms.Rng.IntN(10) + 5
+        }
+        
+        orders[i] = Order{
+            GenotypeID: -1,  // flag as noise trader
+            Action:     action,
+            Quantity:   quantity,
+        }
+    }
+    return orders
 }
