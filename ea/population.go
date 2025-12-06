@@ -183,6 +183,7 @@ func (p *Population[G]) Evolve(generations int) {
 		}
 		fmt.Printf("\t\tBest fitness: %0.2f, ", bestFitness)
 		fmt.Printf("\t\tTotal fitness: %0.2f, ", totalFitness)
+
 		fmt.Printf("\t\t\tAverage fitness: %0.2f\n", totalFitness/float64(len(p.fitnesses)))
 
 		if p.eliteCount > 0 {

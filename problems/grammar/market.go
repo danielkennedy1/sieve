@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand/v2"
 	"os"
 	"strconv"
 	"strings"
@@ -109,7 +110,7 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 			}
 		}
 
-		portfolioValue := funds + float64(holdings)*ms.Market.CurrentPrice
+		portfolioValue := 1.2*funds + float64(holdings)*ms.Market.CurrentPrice
 
 		return portfolioValue / ms.InitialFunds
 	}
@@ -123,22 +124,27 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 	strategies := make([]string, len(genotypes))
 
 	for i, g := range genotypes {
-		strategies[i] = g.MapToGrammar(ms.Grammar, ms.MaxGenes).String()
+		if str, ok := g.Attributes["HardcodedStrategy"]; ok {
+			strategies[i] = str.(string)
+		} else {
+			strategies[i] = g.MapToGrammar(ms.Grammar, ms.MaxGenes).String()
+		}
 	}
 
 	p := ms.Market.InitialPrice
-	rsi := 50.0
 
 	for _, g := range genotypes {
 		g.Attributes["cash"] = ms.InitialFunds
 		g.Attributes["holdings"] = ms.InitialHoldings
 	}
+	last100Buys := 0
+	last100Sells := 0
 
 	for round := 0; round < ms.RoundsPerGen; round++ {
 		var orders []Order
 
 		for i, g := range genotypes {
-			order := ms.generateOrder(&g, i, strategies[i], p, rsi)
+			order := ms.generateOrder(&g, i, strategies[i])
 			orders = append(orders, order)
 		}
 
@@ -165,15 +171,31 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		ms.Market.CurrentPrice = p
 		ms.Market.PriceHistory = append(ms.Market.PriceHistory, p)
 
-		rsi = calculateRSI(ms.Market.PriceHistory, 14)
-		ms.Market.CurrentRSI = calculateRSI(ms.Market.PriceHistory, 14)
 		ms.Market.CurrentVolume = buyVolume + sellVolume
+		ms.Market.CurrentRSI = calculateRSI(ms.Market.PriceHistory, 14)
 		ms.Market.CurrentATR = calculateATR(ms.Market.PriceHistory, 20)
 		ms.Market.CurrentSMA = calculateSMA(ms.Market.PriceHistory, 14)
 
 		ms.History.Timestamps = append(ms.History.Timestamps, ms.generation*ms.RoundsPerGen+round)
 		ms.History.Prices = append(ms.History.Prices, p)
 		ms.History.Volumes = append(ms.History.Volumes, buyVolume+sellVolume)
+
+		// print evert 100 rounds and buys/sells for last 100 rounds
+		if (round+1)%100 == 0 {
+			fmt.Printf("\tRound %d: Price = %s, Buy Volume = %d, Sell Volume = %d\n",
+				round+1,
+				fmt.Sprintf("$%.2f", p),
+				last100Buys,
+				last100Sells)
+			last100Buys = 0
+			last100Sells = 0
+			// print best strategy so far
+			fmt.Printf("\t\tBest Strategy So Far: %s\n",
+				genotypes[0].MapToGrammar(ms.Grammar, ms.MaxGenes).String())
+		} else {
+			last100Buys += buyVolume
+			last100Sells += sellVolume
+		}
 	}
 
 	ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
@@ -213,9 +235,8 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 	ms.History.Generations[idx].BestFitness = bestFitness
 	ms.History.Generations[idx].WorstFitness = worstFitness
 
-	fmt.Printf("\t\tMarket Price: $%.2f, Best: $%.2f, Avg: $%.2f\n",
-		ms.Market.CurrentPrice, bestFitness, avgFitness)
-
+	fmt.Printf("\t\tMarket Price: $%.2f, Best: %.2fx, Avg: %.2fx, Buy: %d, Sell: %d\n",
+		ms.Market.CurrentPrice, bestFitness, avgFitness, ms.History.Generations[idx].BuyOrders, ms.History.Generations[idx].SellOrders)
 	ms.generation++
 }
 
@@ -225,9 +246,10 @@ func (ms *MarketSimulator) ResetOffspring(offspring []genomes.Genotype) {
 		offspring[i].Attributes["cash"] = ms.InitialFunds
 		offspring[i].Attributes["holdings"] = ms.InitialHoldings
 	}
+	ms.Market.CurrentPrice = ms.Market.InitialPrice
 }
 
-func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int, strategy string, price, rsi float64) Order {
+func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int, strategy string) Order {
 	if g.Attributes == nil {
 		g.Attributes = make(map[string]interface{})
 		g.Attributes["cash"] = ms.InitialFunds
@@ -258,6 +280,8 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int, strategy s
 		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
 	}
 
+	ranF := rand.Float64()
+
 	out, err := expr.Run(program, map[string]any{
 		"$PRICE":    ms.Market.CurrentPrice,
 		"$RSI":      ms.Market.CurrentRSI,
@@ -266,9 +290,10 @@ func (ms *MarketSimulator) generateOrder(g *genomes.Genotype, id int, strategy s
 		"$VOLUME":   ms.Market.CurrentVolume,
 		"$ATR":      ms.Market.CurrentATR,
 		"$SMA":      ms.Market.CurrentSMA,
+		"$RANDOM":   ranF,
 	})
 
-	// fmt.Println(out)
+	fmt.Println(out)
 
 	if err != nil {
 		return Order{GenotypeID: id, Action: "HOLD", Quantity: 0}
