@@ -6,6 +6,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"time"
+	"slices"
 
 	"runtime/pprof"
 
@@ -96,9 +97,16 @@ func main() {
 
 	fmt.Printf("Total rounds: %d\n", len(simulator.History.Prices))
 	fmt.Printf("Price range: $%.2f - $%.2f\n",
-		grammar.MinPrice(simulator.History.Prices),
-		grammar.MaxPrice(simulator.History.Prices))
-	fmt.Printf("Total volume traded: %d\n", grammar.SumVolume(simulator.History.Volumes))
+		slices.Min(simulator.History.Prices),
+		slices.Max(simulator.History.Prices))
+
+	totalVolume := 0
+
+	for _, v := range simulator.History.Volumes {
+		totalVolume += v
+	}
+
+	fmt.Printf("Total volume traded: %d\n", totalVolume)
 
 	bestGen := grammar.FindBestGeneration(simulator.History.Generations)
 	fmt.Printf("\nBest generation: %d (avg fitness: $%.2f)\n",
