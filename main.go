@@ -80,9 +80,9 @@ func main() {
 	fmt.Printf("\n=== Results ===\n")
 	fmt.Printf("Best fitness: $%.2f\n", fitness)
 	fmt.Printf("Best strategy: %s\n", best.MapToGrammar(gr, 100).String())
-	fmt.Printf("Final market price: $%.2f\n", simulator.Market.CurrentPrice)
+	fmt.Printf("Final market price: $%.2f\n", simulator.Market.FinalPrice)
 	fmt.Printf("Price change: %.2f%%\n",
-		(simulator.Market.CurrentPrice-simulator.Market.InitialPrice)/simulator.Market.InitialPrice*100)
+		(simulator.Market.FinalPrice-simulator.Market.InitialPrice)/simulator.Market.InitialPrice*100)
 	fmt.Printf("Elapsed time: %s\n", elapsed)
 
 	err = simulator.History.ExportJSON("market_history.json")
