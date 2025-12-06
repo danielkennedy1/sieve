@@ -1,10 +1,11 @@
 <strategy> ::= <condition> ? ( " SELL <decimal> " ) : ( <condition> ? ( " BUY <decimal> " ) : ( " HOLD " ) )
-<condition> ::= ( <condition> <logic> <condition> ) | ( <val> <comp> <val> )
+<condition> ::= ( <condition> <logic> <condition> ) | ( <expr> <comp> <expr> )
+<expr> ::= <val> | ( <val> <op> <val> )
+<val> ::= <var> | <num>
+<num> ::= <decimal> | <int>
 <comp> ::= > | < | ==
 <op> ::= + | - | * | /
-<val> ::= <var> | <num>
-<var> ::= $PRICE | $RSI | $HOLDINGS | $PROGRESS
-<logic> ::= &&
-<num> ::= <decimal> | <int>
+<var> ::= $PRICE | $RSI | $HOLDINGS | $PROGRESS | $FUNDAMENTAL
+<logic> ::= && | or
 <decimal> ::= 0.0 | 0.1 | 0.2 | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 | 1.0
-<int> ::= 0..100
+<int> ::= 0..200

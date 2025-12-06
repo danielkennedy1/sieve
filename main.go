@@ -41,6 +41,7 @@ func main() {
 
 	simulator := grammar.NewMarketSimulator(
 		gr,
+		r,
 		config.Market.InitialPrice,
 		config.Market.InitialFunds,
 		config.Market.InitialHoldings,
