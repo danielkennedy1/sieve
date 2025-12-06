@@ -151,7 +151,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		totalBuyVolume += buyVolume
 		totalSellVolume += sellVolume
 
-		noiseOrders := ms.generateNoiseOrders(0)
+		noiseOrders := ms.generateNoiseOrders(len(genotypes) / 10)
 
 		orders := append(realOrders, noiseOrders...)
 
@@ -174,9 +174,9 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		state.AverageTrueRange = averageTrueRange(priceHistory, 20)
 		state.SimpleMovingAverage = simpleMovingAverage(priceHistory, 14)
 
-		//ms.History.Timestamps = append(ms.History.Timestamps, ms.generation*ms.RoundsPerGen+round)
-		//ms.History.Prices = append(ms.History.Prices, p)
-		//ms.History.Volumes = append(ms.History.Volumes, buyVolume+sellVolume)
+		ms.History.Timestamps = append(ms.History.Timestamps, ms.Generation*ms.Config.RoundsPerGen+round)
+		ms.History.Prices = append(ms.History.Prices, priceHistory...)
+		ms.History.Volumes = append(ms.History.Volumes, buyVolume+sellVolume)
 	}
 
 	ms.FinalState = &state
@@ -187,8 +187,6 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		BuyOrders:  totalBuyVolume,
 		SellOrders: totalSellVolume,
 	})
-
-	//ms.Result.BuyAndHoldPortfolioValue = ms.InitialFunds + p*float64(ms.InitialHoldings)
 
 	//fmt.Println("Best Individual: ", genotypes[bestFitnessIdx].MapToGrammar(ms.Grammar, ms.MaxGenes).String())
 
