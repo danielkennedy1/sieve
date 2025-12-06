@@ -9,6 +9,7 @@ initial_funds = 1500.0
 initial_price = 100.0
 initial_holdings = 15
 rounds_per_generation = 100
+noise_orders_per_round = 100
 
 # Population Settings
 [population]

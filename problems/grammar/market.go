@@ -46,6 +46,7 @@ type MarketConfig struct {
 	InitialFunds    float64
 	InitialHoldings int
 	RoundsPerGen    int
+	NoiseOrdersPerRound int
 }
 
 type Order struct {
@@ -151,7 +152,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		totalBuyVolume += buyVolume
 		totalSellVolume += sellVolume
 
-		noiseOrders := ms.generateNoiseOrders(len(genotypes) / 10)
+		noiseOrders := ms.generateNoiseOrders(ms.Config.NoiseOrdersPerRound)
 
 		orders := append(realOrders, noiseOrders...)
 
@@ -187,8 +188,6 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		BuyOrders:  totalBuyVolume,
 		SellOrders: totalSellVolume,
 	})
-
-	//fmt.Println("Best Individual: ", genotypes[bestFitnessIdx].MapToGrammar(ms.Grammar, ms.MaxGenes).String())
 
 }
 

@@ -42,25 +42,25 @@ func main() {
 	simulator := &grammar.MarketSimulator{
 		FinalState: nil,
 		Config: &grammar.MarketConfig{
-			Grammar:         gr,
-			MaxGenes:        config.MaxGenes,
-			InitialPrice:    config.Market.InitialPrice,
-			InitialFunds:    config.Market.InitialFunds,
-			InitialHoldings: config.Market.InitialHoldings,
-			RoundsPerGen:    config.Market.RoundsPerGeneration,
+			Grammar:             gr,
+			MaxGenes:            config.MaxGenes,
+			InitialPrice:        config.Market.InitialPrice,
+			InitialFunds:        config.Market.InitialFunds,
+			InitialHoldings:     config.Market.InitialHoldings,
+			RoundsPerGen:        config.Market.RoundsPerGeneration,
+			NoiseOrdersPerRound: config.Market.NoiseOrdersPerRound,
 		},
 		History:    &grammar.MarketHistory{},
 		Rng:        r,
 		Generation: 0,
 	}
-	attributes := make(map[string]any)
 
 	population := ea.NewPopulation(
 		config.Population.Size,
 		config.Population.MutationRate,
 		config.Population.CrossoverRate,
 		config.Population.EliteCount,
-		genomes.NewCreateGenotype(config.Population.GeneLength, r, attributes),
+		genomes.NewCreateGenotype(config.Population.GeneLength, r),
 		simulator.NewMarketFitness(),
 		genomes.NewCrossoverGenotype(r),
 		genomes.NewMutateGenotype(r, config.Population.MutationRate),
