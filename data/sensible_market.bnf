@@ -1,0 +1,7 @@
+<strategy> ::= <condition> ? ( " SELL <decimal> " ) : ( <condition> ? ( " BUY <decimal> " ) : ( " HOLD " ) )
+<condition> ::= ( <condition> && <condition> ) | ( <price_expr> <comp> <price_expr> ) | ( <ratio> <comp> <decimal> )
+<price_expr> ::= $PRICE | $FUNDAMENTAL | ( $PRICE <op> $PRICE ) | ( $FUNDAMENTAL <op> <decimal> )
+<ratio> ::= ( $PRICE / $FUNDAMENTAL ) | ( $FUNDAMENTAL / $PRICE ) | $RSI | $PROGRESS
+<comp> ::= >
+<op> ::= * | /
+<decimal> ::= 0.8 | 0.9 | 1.0 | 1.1 | 1.2

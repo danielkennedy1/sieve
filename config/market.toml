@@ -2,7 +2,7 @@ generations = 50
 
 max_genes = 50
 
-bnf_file_path = "data/market.bnf"
+bnf_file_path = "data/sensible_market.bnf"
 
 [market]
 initial_funds = 1500.0
@@ -18,5 +18,5 @@ crossover_rate = 0.6
 max_depth = 15
 gene_length = 100
 tournament_size = 7
-elite_count = 100
+elite_count = 10
 cache_boolean = false
