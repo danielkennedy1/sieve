@@ -2,14 +2,14 @@ generations = 50
 
 max_genes = 200
 
-bnf_file_path = "data/sensible_market.bnf"
+bnf_file_path = "data/market.bnf"
 
 [market]
 initial_funds = 1500.0
 initial_price = 100.0
 initial_holdings = 15
 rounds_per_generation = 100
-noise_orders_per_round = 400
+noise_orders_per_round = 200
 
 # Population Settings
 [population]

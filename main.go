@@ -35,7 +35,7 @@ func main() {
 	}
 	defer f.Close()
 
-	r := rand.New(rand.NewPCG(200, 150))
+	r := rand.New(rand.NewPCG(0, 0))
 	s := bufio.NewScanner(f)
 	gr := grammar.Parse(*s)
 	gr.BuildRuleMap()

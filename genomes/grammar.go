@@ -270,7 +270,7 @@ func NewCreateGenotype(length int, rng *rand.Rand, options ...map[string]any) fu
 	return func() Genotype {
 		attrs := make(map[string]any, len(universalAttributes))
 
-		maps.Copy(universalAttributes, attrs)
+		maps.Copy(attrs, universalAttributes)
 		attrs["id"] = int(id)
 		id++
 		genes := make([]uint8, length)

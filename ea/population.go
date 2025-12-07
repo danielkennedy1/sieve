@@ -25,7 +25,7 @@ type Population[G any] struct {
 	cacheMutex sync.RWMutex
 	toKey      func(G) string
 
-	BeforeEvaluate func([]G)
+	BeforeEvaluate func(*[]G)
 	AfterEvaluate  func([]float64)
 	AfterSelection func([]G)
 }
@@ -115,7 +115,7 @@ func (p *Population[G]) Evolve(generations int) {
 		fmt.Printf("Generation %d\n", generation)
 
 		if p.BeforeEvaluate != nil {
-			p.BeforeEvaluate(p.genomes)
+			p.BeforeEvaluate(&p.genomes)
 		}
 
 		p.evaluateAll()
