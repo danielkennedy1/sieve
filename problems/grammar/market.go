@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/expr-lang/expr"
 
 	"github.com/danielkennedy1/sieve/genomes"
-
 )
 
 type MarketSimulator struct {
@@ -130,7 +130,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 
 	for round := 0; round < ms.Config.RoundsPerGen; round++ {
 
-		if round == ms.Config.RoundsPerGen/2 { // NOTE: Hardcoded regime changes per generation
+		if round % (ms.Config.RoundsPerGen/4) == 0 { // NOTE: Hardcoded regime changes per generation
 			state.FundamentalValue = ms.Config.InitialPrice + (ms.Config.InitialPrice * (ms.Rng.Float64() - 0.5))
 		}
 
@@ -191,6 +191,8 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		BuyOrders:  totalBuyVolume,
 		SellOrders: totalSellVolume,
 	})
+
+	showChart(stateHistory)
 }
 
 func showChart(stateHistory []MarketState) {
@@ -244,6 +246,21 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 	fmt.Printf("\t\tMarket Price: $%.2f, Fundamental Value: $%.2f, Best fitness: %.2f, Avg fitness: %.2f\n", ms.FinalState.Price, ms.FinalState.FundamentalValue, bestFitness, avgFitness)
 
 	fmt.Println("Highest fitness strategy: ", ms.FinalState.Participants[bestFitnessIdx].Strategy)
+
+	slices.Sort(fitnesses)
+    chart := tm.NewLineChart(100, 20)
+
+    data := new(tm.DataTable)
+    data.AddColumn("Rank")
+    data.AddColumn("Fitness")
+
+	for i := range len(fitnesses) {
+		data.AddRow(float64(i), fitnesses[i])
+    }
+    
+	tm.Println(chart.Draw(data))
+	tm.Flush()
+
 
 	ms.Generation++
 }
@@ -408,10 +425,10 @@ func (ms MarketSimulator) generateNoiseOrders(count int) []Order {
 		quantity := 0
 
 		r := ms.Rng.Float64()
-		if r < direction { // 40% buy
+		if r < direction {
 			action = "SELL"
-			quantity = ms.Rng.IntN(10) + 5 // 5-15 units
-		} else { // 40% sell
+			quantity = ms.Rng.IntN(10) + 5
+		} else {
 			action = "BUY"
 			quantity = ms.Rng.IntN(10) + 5
 		}
