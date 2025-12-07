@@ -6,11 +6,14 @@ import (
 	"math"
 	"math/rand/v2"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
-	"github.com/danielkennedy1/sieve/genomes"
+	tm "github.com/buger/goterm"
 	"github.com/expr-lang/expr"
+
+	"github.com/danielkennedy1/sieve/genomes"
 )
 
 type MarketSimulator struct {
@@ -40,12 +43,12 @@ type Participant struct {
 }
 
 type MarketConfig struct {
-	Grammar         genomes.Grammar
-	MaxGenes        int
-	InitialPrice    float64
-	InitialFunds    float64
-	InitialHoldings int
-	RoundsPerGen    int
+	Grammar             genomes.Grammar
+	MaxGenes            int
+	InitialPrice        float64
+	InitialFunds        float64
+	InitialHoldings     int
+	RoundsPerGen        int
 	NoiseOrdersPerRound int
 }
 
@@ -85,8 +88,8 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 				genotypeId = id
 			}
 		}
-
 		participant := ms.FinalState.Participants[genotypeId]
+
 		participantPortfolioValue := participant.Funds + float64(participant.Holdings)*ms.FinalState.Price
 
 		passivePortfolioValue := ms.Config.InitialFunds + float64(ms.Config.InitialHoldings)*ms.FinalState.Price
@@ -99,7 +102,8 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 // FIXME: stateHistory takes a copy of all participants because it's a list of state objects, may be worth changing how participants
 // are stored so they're not copied N*rounds*generations (not great)
 
-func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
+func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
+
 	totalBuyVolume := 0
 	totalSellVolume := 0
 
@@ -110,10 +114,15 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		RelativeStrengthIndex: 50.0,
 		SimpleMovingAverage:   ms.Config.InitialPrice,
 		AverageTrueRange:      0.0,
-		Participants:          make([]Participant, len(genotypes)),
+		Participants:          make([]Participant, len(*genotypes)),
 	}
 
-	for i, g := range genotypes {
+	for i, g := range *genotypes {
+		if (*genotypes)[i].Attributes == nil {
+			(*genotypes)[i].Attributes = make(map[string]any)
+		}
+		(*genotypes)[i].Attributes["id"] = i
+
 		state.Participants[i] = Participant{
 			Id:                 i,
 			Strategy:           g.MapToGrammar(ms.Config.Grammar, ms.Config.MaxGenes).String(),
@@ -127,7 +136,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 
 	for round := 0; round < ms.Config.RoundsPerGen; round++ {
 
-		if round == ms.Config.RoundsPerGen/2 {
+		if round%(ms.Config.RoundsPerGen/4) == 0 { // NOTE: Hardcoded regime changes per generation
 			state.FundamentalValue = ms.Config.InitialPrice + (ms.Config.InitialPrice * (ms.Rng.Float64() - 0.5))
 		}
 
@@ -164,16 +173,16 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 
 		stateHistory[round] = state
 
-		priceHistory := make([]float64, round + 1)
+		priceHistory := make([]float64, round+1)
 
 		for i := range round {
 			priceHistory[i] = stateHistory[i].Price
 		}
 
-		state.RelativeStrengthIndex = relativeStrengthIndex(priceHistory, 14)
+		state.RelativeStrengthIndex = relativeStrengthIndex(priceHistory, 14) // NOTE: Hardcoded RSI period
 		state.Volume = buyVolume + sellVolume
-		state.AverageTrueRange = averageTrueRange(priceHistory, 20)
-		state.SimpleMovingAverage = simpleMovingAverage(priceHistory, 14)
+		state.AverageTrueRange = averageTrueRange(priceHistory, 20)       // NOTE: Hardcoded ATR period
+		state.SimpleMovingAverage = simpleMovingAverage(priceHistory, 14) // NOTE: Hardcoded SMA period
 
 		ms.History.Timestamps = append(ms.History.Timestamps, ms.Generation*ms.Config.RoundsPerGen+round)
 		ms.History.Prices = append(ms.History.Prices, priceHistory...)
@@ -189,6 +198,24 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes []genomes.Genotype) {
 		SellOrders: totalSellVolume,
 	})
 
+	ms.showChart(stateHistory)
+}
+
+func (ms MarketSimulator) showChart(stateHistory []MarketState) {
+	chart := tm.NewLineChart(100, 20)
+
+	data := new(tm.DataTable)
+	data.AddColumn("Round")
+	data.AddColumn("Price")
+	data.AddColumn("Fundamental Value")
+	data.AddColumn("Initial Price")
+
+	for i := range len(stateHistory) {
+		data.AddRow(float64(i), stateHistory[i].Price, stateHistory[i].FundamentalValue, ms.Config.InitialPrice)
+	}
+
+	tm.Println(chart.Draw(data))
+	tm.Flush()
 }
 
 func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
@@ -197,12 +224,15 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 	worstFitness := math.MaxFloat64
 	validCount := 0
 
-	for _, f := range fitnesses {
+	bestFitnessIdx := -1
+
+	for i, f := range fitnesses {
 		if !math.IsInf(f, 0) && !math.IsNaN(f) {
 			totalFitness += f
 			validCount++
 			if f > bestFitness {
 				bestFitness = f
+				bestFitnessIdx = i
 			}
 			if f < worstFitness {
 				worstFitness = f
@@ -221,6 +251,24 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 	ms.History.Generations[idx].WorstFitness = worstFitness
 
 	fmt.Printf("\t\tMarket Price: $%.2f, Fundamental Value: $%.2f, Best fitness: %.2f, Avg fitness: %.2f\n", ms.FinalState.Price, ms.FinalState.FundamentalValue, bestFitness, avgFitness)
+
+	fmt.Println("Highest fitness strategy: ", ms.FinalState.Participants[bestFitnessIdx].Strategy)
+	fmt.Println("Trade count: ", ms.FinalState.Participants[bestFitnessIdx].ExecutedTradeCount)
+	fmt.Println("Fitness: ", bestFitness)
+
+	slices.Sort(fitnesses)
+	chart := tm.NewLineChart(100, 20)
+
+	data := new(tm.DataTable)
+	data.AddColumn("Rank")
+	data.AddColumn("Fitness")
+
+	for i := range len(fitnesses) {
+		data.AddRow(float64(i), fitnesses[i])
+	}
+
+	tm.Println(chart.Draw(data))
+	tm.Flush()
 
 	ms.Generation++
 }
@@ -278,7 +326,7 @@ func (ms *MarketSimulator) generateOrder(p Participant, s MarketState, progress 
 	switch action {
 	case "BUY":
 		if p.Funds >= s.Price {
-			quantity = int(p.Funds/ s.Price * proportion)
+			quantity = int(p.Funds / s.Price * proportion)
 		}
 	case "SELL":
 		quantity = p.Holdings * int(proportion*100) / 100
@@ -312,9 +360,9 @@ func calculateNewPrice(price float64, orders []Order, fundamentalValue float64) 
 	}
 
 	netDemand := buyVolume - sellVolume
-	demandPush := (float64(netDemand) / float64(totalVolume)) * 0.05
+	demandPush := (float64(netDemand) / float64(totalVolume)) * 0.05 // NOTE: Hardcoded demand push coefficient
 
-	fundamentalPull := (fundamentalValue - price) * 0.1
+	fundamentalPull := (fundamentalValue - price) * 0.1 // NOTE: Hardcoded fundamenal fundamental pull coefficient
 
 	newPrice := price + demandPush + fundamentalPull
 
@@ -325,28 +373,28 @@ func calculateNewPrice(price float64, orders []Order, fundamentalValue float64) 
 	return newPrice
 }
 
-func (ms *MarketSimulator) executeOrder(p *Participant, o Order, s MarketState) {
-	switch o.Action {
+func (ms *MarketSimulator) executeOrder(participant *Participant, order Order, state MarketState) {
+	switch order.Action {
 	case "BUY":
-		maxAffordable := int(p.Funds / s.Price)
-		actualQuantity := min(o.Quantity, maxAffordable)
+		maxAffordable := int(participant.Funds / state.Price)
+		actualQuantity := min(order.Quantity, maxAffordable)
 
 		if actualQuantity > 0 {
-			cost := float64(actualQuantity) * s.Price
-			p.Funds -= cost
-			p.Holdings += actualQuantity
-			p.ExecutedTradeCount++
+			cost := float64(actualQuantity) * state.Price
+			participant.Funds -= cost
+			participant.Holdings += actualQuantity
+			participant.ExecutedTradeCount++
 		}
 
 	case "SELL":
-		actualQuantity := min(o.Quantity, p.Holdings)
+		actualQuantity := min(order.Quantity, participant.Holdings)
 
 		if actualQuantity > 0 {
-			proceeds := float64(actualQuantity) * s.Price
-			p.Funds+= proceeds
-			p.Holdings -= actualQuantity
-			p.ExecutedTradeCount++
-		}	
+			proceeds := float64(actualQuantity) * state.Price
+			participant.Funds += proceeds
+			participant.Holdings -= actualQuantity
+			participant.ExecutedTradeCount++
+		}
 	}
 }
 
@@ -360,40 +408,6 @@ func (mh *MarketHistory) ExportJSON(filename string) error {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(mh)
-}
-
-func MinPrice(prices []float64) float64 {
-	if len(prices) == 0 {
-		return 0
-	}
-	min := prices[0]
-	for _, p := range prices {
-		if p < min {
-			min = p
-		}
-	}
-	return min
-}
-
-func MaxPrice(prices []float64) float64 {
-	if len(prices) == 0 {
-		return 0
-	}
-	max := prices[0]
-	for _, p := range prices {
-		if p > max {
-			max = p
-		}
-	}
-	return max
-}
-
-func SumVolume(volumes []int) int {
-	sum := 0
-	for _, v := range volumes {
-		sum += v
-	}
-	return sum
 }
 
 func FindBestGeneration(gens []GenerationSnapshot) GenerationSnapshot {
@@ -419,10 +433,10 @@ func (ms MarketSimulator) generateNoiseOrders(count int) []Order {
 		quantity := 0
 
 		r := ms.Rng.Float64()
-		if r < direction { // 40% buy
+		if r < direction {
 			action = "SELL"
-			quantity = ms.Rng.IntN(10) + 5 // 5-15 units
-		} else { // 40% sell
+			quantity = ms.Rng.IntN(10) + 5
+		} else {
 			action = "BUY"
 			quantity = ms.Rng.IntN(10) + 5
 		}
