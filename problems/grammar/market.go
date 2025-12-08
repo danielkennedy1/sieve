@@ -90,9 +90,9 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 		}
 		participant := ms.FinalState.Participants[genotypeId]
 
-		participantPortfolioValue := participant.Funds + float64(participant.Holdings)*ms.FinalState.Price
+		participantPortfolioValue := participant.Funds + float64(participant.Holdings) * ms.FinalState.Price
 
-		passivePortfolioValue := ms.Config.InitialFunds + float64(ms.Config.InitialHoldings)*ms.FinalState.Price
+		passivePortfolioValue := ms.Config.InitialFunds + float64(ms.Config.InitialHoldings) * ms.FinalState.Price
 
 		return participantPortfolioValue - passivePortfolioValue
 	}
@@ -136,7 +136,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 
 	for round := 0; round < ms.Config.RoundsPerGen; round++ {
 
-		if round%(ms.Config.RoundsPerGen/4) == 0 { // NOTE: Hardcoded regime changes per generation
+		if round%(ms.Config.RoundsPerGen/5) == 0 { // NOTE: Hardcoded regime changes per generation
 			state.FundamentalValue = ms.Config.InitialPrice + (ms.Config.InitialPrice * (ms.Rng.Float64() - 0.5))
 		}
 
@@ -257,6 +257,49 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 	fmt.Println("Fitness: ", bestFitness)
 
 	slices.Sort(fitnesses)
+
+	// Histogram
+	numBins := 20
+	minFit, maxFit := fitnesses[0], fitnesses[len(fitnesses)-1]
+	if minFit == maxFit {
+		minFit -= 1
+		maxFit += 1
+	}
+	binWidth := (maxFit - minFit) / float64(numBins)
+	bins := make([]int, numBins)
+
+	for _, f := range fitnesses {
+		if math.IsInf(f, 0) || math.IsNaN(f) {
+			continue
+		}
+		binIdx := int((f - minFit) / binWidth)
+		if binIdx >= numBins {
+			binIdx = numBins - 1
+		}
+		bins[binIdx]++
+	}
+
+	maxCount := 0
+	for _, count := range bins {
+		if count > maxCount {
+			maxCount = count
+		}
+	}
+
+	histogram := tm.NewLineChart(100, 20)
+	histogramData := new(tm.DataTable)
+	histogramData.AddColumn("Fitness")
+	histogramData.AddColumn("Frequency")
+
+	f := (minFit + binWidth) / 2
+	for i := range bins {
+		histogramData.AddRow(f, float64(bins[i]))
+		f += binWidth
+	}
+
+	tm.Println(histogram.Draw(histogramData))
+	tm.Flush()
+
 	chart := tm.NewLineChart(100, 20)
 
 	data := new(tm.DataTable)
@@ -360,9 +403,9 @@ func calculateNewPrice(price float64, orders []Order, fundamentalValue float64) 
 	}
 
 	netDemand := buyVolume - sellVolume
-	demandPush := (float64(netDemand) / float64(totalVolume)) * 0.05 // NOTE: Hardcoded demand push coefficient
+	demandPush := (float64(netDemand) / float64(totalVolume)) * 0.1 // NOTE: Hardcoded demand push coefficient
 
-	fundamentalPull := (fundamentalValue - price) * 0.1 // NOTE: Hardcoded fundamenal fundamental pull coefficient
+	fundamentalPull := (fundamentalValue - price) * 0.01 // NOTE: Hardcoded fundamenal fundamental pull coefficient
 
 	newPrice := price + demandPush + fundamentalPull
 
@@ -428,6 +471,10 @@ func (ms MarketSimulator) generateNoiseOrders(count int) []Order {
 
 	direction := ms.Rng.Float64()
 
+	if ms.FinalState != nil {
+		direction = ms.FinalState.RelativeStrengthIndex / 100
+	}
+
 	for i := 0; i < count; i++ {
 		action := "HOLD"
 		quantity := 0
@@ -435,10 +482,10 @@ func (ms MarketSimulator) generateNoiseOrders(count int) []Order {
 		r := ms.Rng.Float64()
 		if r < direction {
 			action = "SELL"
-			quantity = ms.Rng.IntN(10) + 5
+			quantity = ms.Rng.IntN(100) + 5
 		} else {
 			action = "BUY"
-			quantity = ms.Rng.IntN(10) + 5
+			quantity = ms.Rng.IntN(100) + 5
 		}
 
 		orders[i] = Order{
