@@ -25,8 +25,8 @@ type MarketSimulator struct {
 }
 
 type StrategyResult struct {
-	Id             int
-	Strategy       string
+	Id           int
+	Strategy     string
 	ActiveReturn float64
 }
 
@@ -46,16 +46,24 @@ type Participant struct {
 	Funds              float64
 	Holdings           int
 	ExecutedTradeCount int
+	Solvent            bool
 }
 
 type MarketConfig struct {
-	Grammar             genomes.Grammar
-	MaxGenes            int
-	InitialPrice        float64
-	InitialFunds        float64
-	InitialHoldings     int
-	RoundsPerGen        int
-	NoiseOrdersPerRound int
+	Grammar                              genomes.Grammar
+	MaxGenes                             int
+	InitialPrice                         float64
+	InitialFunds                         float64
+	InitialHoldings                      int
+	RoundsPerSim                         int
+	NoiseOrdersPerRound                  int
+	SimsPerGeneration                    int
+	FundamentalValueChangesPerSimulation int
+	DemandPushCoefficient                float64
+	FundamentalPullCoefficient           float64
+	RSIPeriod                            int
+	ATRPeriod                            int
+	SMAPeriod                            int
 }
 
 type Order struct {
@@ -94,6 +102,7 @@ func (ms *MarketSimulator) NewMarketFitness() func(g genomes.Genotype) float64 {
 				genotypeId = id
 			}
 		}
+
 		return ms.Results[genotypeId].ActiveReturn
 	}
 
@@ -134,9 +143,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 		}
 	}
 
-	simsPerGeneration := 20 // NOTE: Hardcoded no. of market simulations per generation
-
-	for range simsPerGeneration {
+	for range ms.Config.SimsPerGeneration {
 		state := initialState
 		state.Participants = make([]Participant, len(*genotypes))
 		copy(state.Participants, initialState.Participants)
@@ -144,16 +151,20 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 	}
 
 	for i := range marketStates {
-		for round := 0; round < ms.Config.RoundsPerGen; round++ {
+		for round := 0; round < ms.Config.RoundsPerSim; round++ {
 
-			if round%(ms.Config.RoundsPerGen/2) == 0 { // NOTE: Hardcoded regime changes per simulation
+			if round%(ms.Config.RoundsPerSim/ms.Config.FundamentalValueChangesPerSimulation) == 0 {
 				marketStates[i].FundamentalValue = ms.Config.InitialPrice + (ms.Config.InitialPrice * (ms.Rng.Float64() - 0.5))
+			}
+
+			for j := range marketStates[i].Participants {
+			    marketStates[i].Participants[j].Solvent = (marketStates[i].Participants[j].Funds + float64(marketStates[i].Participants[j].Holdings) * marketStates[i].Price) > 0
 			}
 
 			realOrders := make([]Order, len(marketStates[i].Participants))
 
 			for j, p := range marketStates[i].Participants {
-				order := ms.generateOrder(p, marketStates[i], float64(round)/float64(ms.Config.RoundsPerGen))
+				order := ms.generateOrder(p, marketStates[i], float64(round)/float64(ms.Config.RoundsPerSim))
 				realOrders[j] = order
 			}
 
@@ -175,20 +186,21 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 
 			orders := append(realOrders, noiseOrders...)
 
-			marketStates[i].Price = calculateNewPrice(marketStates[i].Price, orders, marketStates[i].FundamentalValue)
 
 			for j, o := range realOrders {
 				ms.executeOrder(&marketStates[i].Participants[j], o, marketStates[i])
 			}
 
+			marketStates[i].Price = calculateNewPrice(marketStates[i].Price, orders, marketStates[i].FundamentalValue, ms.Config.DemandPushCoefficient, ms.Config.FundamentalPullCoefficient)
+
 			priceHistory := make([]float64, round+1)
 
-			marketStates[i].RelativeStrengthIndex = relativeStrengthIndex(priceHistory, 14) // NOTE: Hardcoded RSI period
+			marketStates[i].RelativeStrengthIndex = relativeStrengthIndex(priceHistory, ms.Config.RSIPeriod)
 			marketStates[i].Volume = buyVolume + sellVolume
-			marketStates[i].AverageTrueRange = averageTrueRange(priceHistory, 20)       // NOTE: Hardcoded ATR period
-			marketStates[i].SimpleMovingAverage = simpleMovingAverage(priceHistory, 14) // NOTE: Hardcoded SMA period
+			marketStates[i].AverageTrueRange = averageTrueRange(priceHistory, ms.Config.ATRPeriod)
+			marketStates[i].SimpleMovingAverage = simpleMovingAverage(priceHistory, ms.Config.SMAPeriod)
 
-			ms.History.Timestamps = append(ms.History.Timestamps, ms.Generation*ms.Config.RoundsPerGen+round)
+			ms.History.Timestamps = append(ms.History.Timestamps, ms.Generation*ms.Config.RoundsPerSim+round)
 			ms.History.Prices = append(ms.History.Prices, priceHistory...)
 			ms.History.Volumes = append(ms.History.Volumes, buyVolume+sellVolume)
 		}
@@ -198,19 +210,24 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 
 	for genotypeId := range *genotypes {
 		results = append(results, StrategyResult{
-			Id: genotypeId,
-			Strategy: marketStates[0].Participants[genotypeId].Strategy,
+			Id:           genotypeId,
+			Strategy:     marketStates[0].Participants[genotypeId].Strategy,
 			ActiveReturn: 0,
 		})
-		for marketIdx := range simsPerGeneration {
-			portfolioValue := marketStates[marketIdx].Participants[genotypeId].Funds + float64(marketStates[marketIdx].Participants[genotypeId].Holdings) * marketStates[marketIdx].Price
-			passivePortfolioValue := ms.Config.InitialFunds + float64(ms.Config.InitialHoldings) * marketStates[marketIdx].Price
+		for marketIdx := range ms.Config.SimsPerGeneration {
+			// If the strategy blows up the account in any market, bin it
+			if (!marketStates[marketIdx].Participants[genotypeId].Solvent) {
+				results[genotypeId].ActiveReturn = math.Inf(-1)
+				break
+			}
+
+			portfolioValue := marketStates[marketIdx].Participants[genotypeId].Funds + float64(marketStates[marketIdx].Participants[genotypeId].Holdings)*marketStates[marketIdx].Price
+			passivePortfolioValue := ms.Config.InitialFunds + float64(ms.Config.InitialHoldings)*marketStates[marketIdx].Price
 			results[genotypeId].ActiveReturn += portfolioValue - passivePortfolioValue
 		}
 	}
 
 	ms.Results = results
-
 
 	//ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
 	//	Generation: ms.Generation,
@@ -240,17 +257,18 @@ func (ms MarketSimulator) showChart(stateHistory []MarketState) {
 }
 
 func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
+
 	totalFitness := 0.0
 	bestFitness := -math.MaxFloat64
 	worstFitness := math.MaxFloat64
-	validCount := 0
+	survivorCount := 0
 
 	bestFitnessIdx := -1
 
 	for i, f := range fitnesses {
 		if !math.IsInf(f, 0) && !math.IsNaN(f) {
 			totalFitness += f
-			validCount++
+			survivorCount++
 			if f > bestFitness {
 				bestFitness = f
 				bestFitnessIdx = i
@@ -273,6 +291,7 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 
 	//fmt.Printf("\t\tMarket Price: $%.2f, Fundamental Value: $%.2f, Best fitness: %.2f, Avg fitness: %.2f\n", ms.FinalState.Price, ms.FinalState.FundamentalValue, bestFitness, avgFitness)
 
+	fmt.Println("Survivor count: ", survivorCount)
 	fmt.Println("Highest fitness strategy: ", ms.Results[bestFitnessIdx].Strategy)
 	//fmt.Println("Trade count: ", ms.FinalState.Participants[bestFitnessIdx].ExecutedTradeCount)
 	fmt.Println("Fitness: ", bestFitness)
@@ -281,19 +300,14 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 
 	// Histogram
 	numBins := 20
-	minFit, maxFit := fitnesses[0], fitnesses[len(fitnesses)-1]
-	if minFit == maxFit {
-		minFit -= 1
-		maxFit += 1
-	}
-	binWidth := (maxFit - minFit) / float64(numBins)
+	binWidth := (bestFitness - worstFitness) / float64(numBins)
 	bins := make([]int, numBins)
 
 	for _, f := range fitnesses {
 		if math.IsInf(f, 0) || math.IsNaN(f) {
 			continue
 		}
-		binIdx := int((f - minFit) / binWidth)
+		binIdx := int((f - worstFitness) / binWidth)
 		if binIdx >= numBins {
 			binIdx = numBins - 1
 		}
@@ -312,7 +326,7 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 	histogramData.AddColumn("Fitness")
 	histogramData.AddColumn("Frequency")
 
-	f := (minFit + binWidth) / 2
+	f := (worstFitness + binWidth) / 2
 	for i := range bins {
 		histogramData.AddRow(f, float64(bins[i]))
 		f += binWidth
@@ -325,6 +339,9 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 }
 
 func (ms *MarketSimulator) generateOrder(p Participant, s MarketState, progress float64) Order {
+	if (!p.Solvent) {
+		return Order{GenotypeID: p.Id, Action: "HOLD", Quantity: 0}
+	}
 	program, err := expr.Compile(p.Strategy)
 
 	if err != nil {
@@ -366,33 +383,21 @@ func (ms *MarketSimulator) generateOrder(p Participant, s MarketState, progress 
 		}
 	}
 
-	var quantity int
-
-	proportion, err := strconv.ParseFloat(elements[1], 64)
+	quantity, err := strconv.ParseInt(elements[1], 10, 64)
 
 	if err != nil {
+		fmt.Println("Error parsing int from ", str)
 		return Order{GenotypeID: p.Id, Action: "HOLD", Quantity: 0}
-	}
-
-	switch action {
-	case "BUY":
-		if p.Funds >= s.Price {
-			quantity = int(p.Funds / s.Price * proportion)
-		}
-	case "SELL":
-		quantity = p.Holdings * int(proportion*100) / 100
-	default:
-		quantity = 0
 	}
 
 	return Order{
 		GenotypeID: p.Id,
 		Action:     action,
-		Quantity:   quantity,
+		Quantity:   int(quantity),
 	}
 }
 
-func calculateNewPrice(price float64, orders []Order, fundamentalValue float64) float64 {
+func calculateNewPrice(price float64, orders []Order, fundamentalValue, demandPushCoefficient, fundamentalPullcoefficient float64) float64 {
 	buyVolume := 0
 	sellVolume := 0
 
@@ -411,9 +416,9 @@ func calculateNewPrice(price float64, orders []Order, fundamentalValue float64) 
 	}
 
 	netDemand := buyVolume - sellVolume
-	demandPush := (float64(netDemand) / float64(totalVolume)) * 0.1 // NOTE: Hardcoded demand push coefficient
+	demandPush := (float64(netDemand) / float64(totalVolume)) * demandPushCoefficient
 
-	fundamentalPull := (fundamentalValue - price) * 0.01 // NOTE: Hardcoded fundamenal fundamental pull coefficient
+	fundamentalPull := (fundamentalValue - price) * fundamentalPullcoefficient
 
 	newPrice := price + demandPush + fundamentalPull
 
@@ -427,25 +432,16 @@ func calculateNewPrice(price float64, orders []Order, fundamentalValue float64) 
 func (ms *MarketSimulator) executeOrder(participant *Participant, order Order, state MarketState) {
 	switch order.Action {
 	case "BUY":
-		maxAffordable := int(participant.Funds / state.Price)
-		actualQuantity := min(order.Quantity, maxAffordable)
-
-		if actualQuantity > 0 {
-			cost := float64(actualQuantity) * state.Price
-			participant.Funds -= cost
-			participant.Holdings += actualQuantity
-			participant.ExecutedTradeCount++
-		}
+		cost := float64(order.Quantity) * state.Price
+		participant.Funds -= cost
+		participant.Holdings += order.Quantity
+		participant.ExecutedTradeCount++
 
 	case "SELL":
-		actualQuantity := min(order.Quantity, participant.Holdings)
-
-		if actualQuantity > 0 {
-			proceeds := float64(actualQuantity) * state.Price
-			participant.Funds += proceeds
-			participant.Holdings -= actualQuantity
-			participant.ExecutedTradeCount++
-		}
+		proceeds := float64(order.Quantity) * state.Price
+		participant.Funds += proceeds
+		participant.Holdings -= order.Quantity
+		participant.ExecutedTradeCount++
 	}
 }
 

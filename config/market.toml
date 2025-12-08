@@ -10,6 +10,13 @@ initial_price = 100.0
 initial_holdings = 15
 rounds_per_generation = 30
 noise_orders_per_round = 800
+sims_per_generation = 20
+fundamental_value_changes_per_simulation = 1
+demand_push_coefficient = 0.2
+fundamental_pull_coefficient = 0.01 
+rsi_period = 14
+atr_period = 20
+sma_period = 14
 
 # Population Settings
 [population]
