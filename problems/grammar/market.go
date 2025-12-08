@@ -25,8 +25,8 @@ type MarketSimulator struct {
 }
 
 type StrategyResult struct {
-	Id             int
-	Strategy       string
+	Id           int
+	Strategy     string
 	ActiveReturn float64
 }
 
@@ -49,13 +49,20 @@ type Participant struct {
 }
 
 type MarketConfig struct {
-	Grammar             genomes.Grammar
-	MaxGenes            int
-	InitialPrice        float64
-	InitialFunds        float64
-	InitialHoldings     int
-	RoundsPerGen        int
-	NoiseOrdersPerRound int
+	Grammar                              genomes.Grammar
+	MaxGenes                             int
+	InitialPrice                         float64
+	InitialFunds                         float64
+	InitialHoldings                      int
+	RoundsPerSim                         int
+	NoiseOrdersPerRound                  int
+	SimsPerGeneration                    int
+	FundamentalValueChangesPerSimulation int
+	DemandPushCoefficient                float64
+	FundamentalPullCoefficient           float64
+	RSIPeriod int
+	ATRPeriod int
+	SMAPeriod int
 }
 
 type Order struct {
@@ -134,9 +141,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 		}
 	}
 
-	simsPerGeneration := 20 // NOTE: Hardcoded no. of market simulations per generation
-
-	for range simsPerGeneration {
+	for range ms.Config.SimsPerGeneration {
 		state := initialState
 		state.Participants = make([]Participant, len(*genotypes))
 		copy(state.Participants, initialState.Participants)
@@ -144,16 +149,16 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 	}
 
 	for i := range marketStates {
-		for round := 0; round < ms.Config.RoundsPerGen; round++ {
+		for round := 0; round < ms.Config.RoundsPerSim; round++ {
 
-			if round%(ms.Config.RoundsPerGen/2) == 0 { // NOTE: Hardcoded regime changes per simulation
+			if round%(ms.Config.RoundsPerSim/ms.Config.FundamentalValueChangesPerSimulation) == 0 {
 				marketStates[i].FundamentalValue = ms.Config.InitialPrice + (ms.Config.InitialPrice * (ms.Rng.Float64() - 0.5))
 			}
 
 			realOrders := make([]Order, len(marketStates[i].Participants))
 
 			for j, p := range marketStates[i].Participants {
-				order := ms.generateOrder(p, marketStates[i], float64(round)/float64(ms.Config.RoundsPerGen))
+				order := ms.generateOrder(p, marketStates[i], float64(round)/float64(ms.Config.RoundsPerSim))
 				realOrders[j] = order
 			}
 
@@ -175,7 +180,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 
 			orders := append(realOrders, noiseOrders...)
 
-			marketStates[i].Price = calculateNewPrice(marketStates[i].Price, orders, marketStates[i].FundamentalValue)
+			marketStates[i].Price = calculateNewPrice(marketStates[i].Price, orders, marketStates[i].FundamentalValue, ms.Config.DemandPushCoefficient, ms.Config.FundamentalPullCoefficient)
 
 			for j, o := range realOrders {
 				ms.executeOrder(&marketStates[i].Participants[j], o, marketStates[i])
@@ -183,12 +188,12 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 
 			priceHistory := make([]float64, round+1)
 
-			marketStates[i].RelativeStrengthIndex = relativeStrengthIndex(priceHistory, 14) // NOTE: Hardcoded RSI period
+			marketStates[i].RelativeStrengthIndex = relativeStrengthIndex(priceHistory, ms.Config.RSIPeriod)
 			marketStates[i].Volume = buyVolume + sellVolume
-			marketStates[i].AverageTrueRange = averageTrueRange(priceHistory, 20)       // NOTE: Hardcoded ATR period
-			marketStates[i].SimpleMovingAverage = simpleMovingAverage(priceHistory, 14) // NOTE: Hardcoded SMA period
+			marketStates[i].AverageTrueRange = averageTrueRange(priceHistory, ms.Config.ATRPeriod)
+			marketStates[i].SimpleMovingAverage = simpleMovingAverage(priceHistory, ms.Config.SMAPeriod)
 
-			ms.History.Timestamps = append(ms.History.Timestamps, ms.Generation*ms.Config.RoundsPerGen+round)
+			ms.History.Timestamps = append(ms.History.Timestamps, ms.Generation*ms.Config.RoundsPerSim+round)
 			ms.History.Prices = append(ms.History.Prices, priceHistory...)
 			ms.History.Volumes = append(ms.History.Volumes, buyVolume+sellVolume)
 		}
@@ -198,19 +203,18 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 
 	for genotypeId := range *genotypes {
 		results = append(results, StrategyResult{
-			Id: genotypeId,
-			Strategy: marketStates[0].Participants[genotypeId].Strategy,
+			Id:           genotypeId,
+			Strategy:     marketStates[0].Participants[genotypeId].Strategy,
 			ActiveReturn: 0,
 		})
-		for marketIdx := range simsPerGeneration {
-			portfolioValue := marketStates[marketIdx].Participants[genotypeId].Funds + float64(marketStates[marketIdx].Participants[genotypeId].Holdings) * marketStates[marketIdx].Price
-			passivePortfolioValue := ms.Config.InitialFunds + float64(ms.Config.InitialHoldings) * marketStates[marketIdx].Price
+		for marketIdx := range ms.Config.SimsPerGeneration {
+			portfolioValue := marketStates[marketIdx].Participants[genotypeId].Funds + float64(marketStates[marketIdx].Participants[genotypeId].Holdings)*marketStates[marketIdx].Price
+			passivePortfolioValue := ms.Config.InitialFunds + float64(ms.Config.InitialHoldings)*marketStates[marketIdx].Price
 			results[genotypeId].ActiveReturn += portfolioValue - passivePortfolioValue
 		}
 	}
 
 	ms.Results = results
-
 
 	//ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
 	//	Generation: ms.Generation,
@@ -392,7 +396,7 @@ func (ms *MarketSimulator) generateOrder(p Participant, s MarketState, progress 
 	}
 }
 
-func calculateNewPrice(price float64, orders []Order, fundamentalValue float64) float64 {
+func calculateNewPrice(price float64, orders []Order, fundamentalValue, demandPushCoefficient, fundamentalPullcoefficient float64) float64 {
 	buyVolume := 0
 	sellVolume := 0
 
@@ -411,9 +415,9 @@ func calculateNewPrice(price float64, orders []Order, fundamentalValue float64) 
 	}
 
 	netDemand := buyVolume - sellVolume
-	demandPush := (float64(netDemand) / float64(totalVolume)) * 0.1 // NOTE: Hardcoded demand push coefficient
+	demandPush := (float64(netDemand) / float64(totalVolume)) * demandPushCoefficient
 
-	fundamentalPull := (fundamentalValue - price) * 0.01 // NOTE: Hardcoded fundamenal fundamental pull coefficient
+	fundamentalPull := (fundamentalValue - price) * fundamentalPullcoefficient
 
 	newPrice := price + demandPush + fundamentalPull
 

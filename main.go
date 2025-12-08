@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"os"
-	"time"
 	"slices"
+	"time"
 
 	"runtime/pprof"
 
@@ -43,13 +43,20 @@ func main() {
 	simulator := &grammar.MarketSimulator{
 		Results: nil,
 		Config: &grammar.MarketConfig{
-			Grammar:             gr,
-			MaxGenes:            config.MaxGenes,
-			InitialPrice:        config.Market.InitialPrice,
-			InitialFunds:        config.Market.InitialFunds,
-			InitialHoldings:     config.Market.InitialHoldings,
-			RoundsPerGen:        config.Market.RoundsPerGeneration,
-			NoiseOrdersPerRound: config.Market.NoiseOrdersPerRound,
+			Grammar:                              gr,
+			MaxGenes:                             config.MaxGenes,
+			InitialPrice:                         config.Market.InitialPrice,
+			InitialFunds:                         config.Market.InitialFunds,
+			InitialHoldings:                      config.Market.InitialHoldings,
+			RoundsPerSim:                         config.Market.RoundsPerGeneration,
+			NoiseOrdersPerRound:                  config.Market.NoiseOrdersPerRound,
+			SimsPerGeneration:                    config.Market.SimsPerGeneration,
+			FundamentalValueChangesPerSimulation: config.Market.FundamentalValueChangesPerSimulation,
+			DemandPushCoefficient:                config.Market.DemandPushCoefficient,
+			FundamentalPullCoefficient:           config.Market.FundamentalPullCoefficient,
+			RSIPeriod:                            config.Market.RSIPeriod,
+			ATRPeriod:                            config.Market.ATRPeriod,
+			SMAPeriod:                            config.Market.SMAPeriod,
 		},
 		History:    &grammar.MarketHistory{},
 		Rng:        r,

@@ -7,11 +7,18 @@ import (
 )
 
 type MarketConfig struct {
-	InitialPrice        float64 `mapstructure:"initial_price"`
-	InitialFunds        float64 `mapstructure:"initial_funds"`
-	RoundsPerGeneration int     `mapstructure:"rounds_per_generation"`
-	InitialHoldings     int     `mapstructure:"initial_holdings"`
-	NoiseOrdersPerRound int     `mapstructure:"noise_orders_per_round"`
+	InitialPrice                         float64 `mapstructure:"initial_price"`
+	InitialFunds                         float64 `mapstructure:"initial_funds"`
+	RoundsPerGeneration                  int     `mapstructure:"rounds_per_generation"`
+	InitialHoldings                      int     `mapstructure:"initial_holdings"`
+	NoiseOrdersPerRound                  int     `mapstructure:"noise_orders_per_round"`
+	SimsPerGeneration                    int     `mapstructure:"sims_per_generation"`
+	FundamentalValueChangesPerSimulation int     `mapstructure:"fundamental_value_changes_per_simulation"`
+	DemandPushCoefficient                float64 `mapstructure:"demand_push_coefficient"`
+	FundamentalPullCoefficient           float64 `mapstructure:"fundamental_pull_coefficient"`
+	RSIPeriod                            int     `mapstructure:"rsi_period"`
+	ATRPeriod                            int     `mapstructure:"atr_period"`
+	SMAPeriod                            int     `mapstructure:"sma_period"`
 }
 type PopulationConfig struct {
 	Size           int     `mapstructure:"size"`
