@@ -1,4 +1,4 @@
-<strategy> ::= <condition> ? ( " SELL <decimal> " ) : ( <condition> ? ( " BUY <decimal> " ) : ( " HOLD " ) )
+<strategy> ::= <condition> ? ( " SELL <int> " ) : ( <condition> ? ( " BUY <int> " ) : ( " HOLD " ) )
 <condition> ::= ( <condition> <logic> <condition> ) | ( <expr> <comp> <expr> )
 <expr> ::= <val> | ( <val> <op> <val> )
 <val> ::= <var> | <num>
