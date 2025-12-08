@@ -41,7 +41,7 @@ func main() {
 	gr.BuildRuleMap()
 
 	simulator := &grammar.MarketSimulator{
-		FinalState: nil,
+		Results: nil,
 		Config: &grammar.MarketConfig{
 			Grammar:             gr,
 			MaxGenes:            config.MaxGenes,
@@ -83,9 +83,6 @@ func main() {
 	fmt.Printf("\n=== Results ===\n")
 	fmt.Printf("Best fitness: $%.2f\n", fitness)
 	fmt.Printf("Best strategy: %s\n", best.MapToGrammar(gr, 100).String())
-	fmt.Printf("Final market price: $%.2f\n", simulator.FinalState.Price)
-	fmt.Printf("Price change: %.2f%%\n",
-		(simulator.FinalState.Price-simulator.Config.InitialPrice)/simulator.Config.InitialPrice*100)
 	fmt.Printf("Elapsed time: %s\n", elapsed)
 
 	err = simulator.History.ExportJSON("market_history.json")
