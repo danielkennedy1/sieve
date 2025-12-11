@@ -19,6 +19,7 @@ type MarketConfig struct {
 	RSIPeriod                            int     `mapstructure:"rsi_period"`
 	ATRPeriod                            int     `mapstructure:"atr_period"`
 	SMAPeriod                            int     `mapstructure:"sma_period"`
+	RiskFreeRate                         float64 `mapstructure:"risk_free_rate"`
 }
 type PopulationConfig struct {
 	Size           int     `mapstructure:"size"`
@@ -51,6 +52,8 @@ type Config struct {
 
 	// General Settings (Top level)
 	BNFFilePath string `mapstructure:"bnf_file_path"`
+
+	BestStrategy string `mapstructure:"best_strategy"`
 }
 
 func DefaultConfig() Config {

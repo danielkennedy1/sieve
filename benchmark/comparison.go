@@ -20,10 +20,11 @@ type AgentStats struct {
 	TotalStock  int
 	TotalWealth float64
 	TotalFit    float64
+	TotalSharpe float64
 }
 
 func RunComparison() {
-	config, err := config.LoadConfig("market")
+	config, err := config.LoadConfig("compare")
 	if err != nil {
 		fmt.Printf("Fatal error loading configuration: %v\n", err)
 		os.Exit(1)
@@ -64,13 +65,13 @@ func RunComparison() {
 		Generation: 0,
 	}
 
-	bestGAStrategy := `( ( $PRICE / $FUNDAMENTAL ) > 1.1 ) ? ( " SELL 9 " ) : ( ( $PRICE > $PRICE ) ? ( " BUY 6 " ) : ( " HOLD " ) )`
+	bestStrategy := config.BestStrategy
 
 	strategicTypes := []struct {
 		Name     string
 		Strategy string
 	}{
-		{Name: "Best GA", Strategy: bestGAStrategy},
+		{Name: "Best GA", Strategy: bestStrategy},
 		{Name: "Buy & Hold", Strategy: `(true) ? "BUY 5" : "SELL 0"`},
 		{Name: "Simple", Strategy: `($PRICE <= 110) ? "BUY 5" : "SELL 5"`},
 		{Name: "Random", Strategy: `($RANDOM >= 0.5) ? "BUY 1" : "SELL 1"`},
@@ -98,14 +99,11 @@ func RunComparison() {
 		genotypes = append(genotypes, g)
 	}
 
-	// 5a. Create Strategic Agents
 	for _, agent := range strategicTypes {
 		for i := 0; i < clonesPerType; i++ {
 			createAgent(agent.Name, agent.Strategy)
 		}
 	}
-
-	// 5b. Removed Noise Agent Creation
 
 	start := time.Now()
 	simulator.BeforeGeneration(&genotypes)
@@ -117,7 +115,6 @@ func RunComparison() {
 		return
 	}
 
-	// Aggregate Final Balances across all markets
 	for i, g := range genotypes {
 		totalFinalCash := 0.0
 		totalFinalHoldings := 0
@@ -148,12 +145,11 @@ func RunComparison() {
 		reportingFinalPrice,
 		((reportingFinalPrice-config.Market.InitialPrice)/config.Market.InitialPrice)*100,
 	)
-	fmt.Println("--------------------------------------------------------------------------------------")
-	fmt.Printf("%-15s | %-6s | %-14s | %-12s | %-14s | %-8s\n",
-		"Agent Type", "Count", "Avg Wealth", "Avg Cash", "Avg Holdings", "Avg Fit")
-	fmt.Println("--------------------------------------------------------------------------------------")
+	fmt.Println("-------------------------------------------------------------------------------------------------------")
+	fmt.Printf("%-15s | %-6s | %-14s | %-12s | %-14s | %-11s | %-8s\n",
+		"Agent Type", "Count", "Avg Wealth", "Avg Cash", "Avg Holdings", "Avg Fit", "Avg Sharpe")
+	fmt.Println("-------------------------------------------------------------------------------------------------------")
 
-	// Stats initialization and reporting loop, now excluding Noise
 	stats := make(map[string]*AgentStats)
 	allNames := []string{}
 	for _, a := range strategicTypes {
@@ -185,6 +181,15 @@ func RunComparison() {
 		if !math.IsNaN(fitness) && !math.IsInf(fitness, 0) {
 			s.TotalFit += fitness
 		}
+
+		// Add Sharpe ratio calculation
+		if idAny, ok := g.Attributes["id"]; ok {
+			id := idAny.(int)
+			sharpe := simulator.Results[id].SharpeRatio
+			if !math.IsNaN(sharpe) && !math.IsInf(sharpe, 0) {
+				s.TotalSharpe += sharpe
+			}
+		}
 	}
 
 	for _, name := range allNames {
@@ -197,12 +202,12 @@ func RunComparison() {
 		avgCash := s.TotalCash / float64(s.Count)
 		avgHoldings := float64(s.TotalStock) / float64(s.Count)
 		avgFit := s.TotalFit / float64(s.Count)
+		avgSharpe := s.TotalSharpe / float64(s.Count)
 
-		fmt.Printf("%-15s | %-6d | $%-13.2f | $%-11.2f | %-14.1f | %.4f\n",
-			s.Name, s.Count, avgWealth, avgCash, avgHoldings, avgFit)
+		fmt.Printf("%-15s | %-6d | $%-13.2f | $%-11.2f | %-14.1f | %-11.4f | %-11.4f |\n",
+			s.Name, s.Count, avgWealth, avgCash, avgHoldings, avgFit, avgSharpe)
 	}
-	fmt.Println("--------------------------------------------------------------------------------------")
-
+	fmt.Println("-------------------------------------------------------------------------------------------------------")
 	simulator.History.ExportJSON("comparison_history.json")
 	fmt.Println("\nHistory exported to comparison_history.json")
 }
