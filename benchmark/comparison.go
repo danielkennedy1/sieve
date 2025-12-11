@@ -112,7 +112,7 @@ func RunComparison() {
 
 	// 6. Run Simulation
 	start := time.Now()
-	simulator.BeforeGeneration(genotypes)
+	simulator.BeforeGeneration(&genotypes)
 	elapsed := time.Since(start)
 
 	// 7. Calculate Stats

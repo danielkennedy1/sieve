@@ -33,7 +33,7 @@ type MarketSimulator struct {
 
 func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings, roundsPerGen, maxGenes int) *MarketSimulator {
 	return &MarketSimulator{
-		Market:          NewMarketState(initialPrice),
+		Market:          *NewMarketState(initialPrice),
 		History:         NewMarketHistory(),
 		Grammar:         grammar,
 		MaxGenes:        maxGenes,
@@ -44,6 +44,24 @@ func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds floa
 	}
 }
 
+func NewMarketState(initialPrice float64) *MarketState {
+	return &MarketState{
+		CurrentPrice:  initialPrice,
+		InitialPrice:  initialPrice,
+		PriceHistory:  []float64{initialPrice},
+		VolumeHistory: []int{},
+	}
+}
+
+func NewMarketHistory() *MarketHistory {
+	return &MarketHistory{
+		Timestamps:  []int{},
+		Prices:      []float64{},
+		Volumes:     []int{},
+		Generations: []GenerationSnapshot{},
+	}
+}
+
 type StrategyResult struct {
 	Id           int
 	Strategy     string
@@ -51,6 +69,10 @@ type StrategyResult struct {
 }
 
 type MarketState struct {
+	CurrentPrice          float64
+	InitialPrice          float64
+	PriceHistory          []float64
+	VolumeHistory         []int
 	Price                 float64
 	Volume                int
 	FundamentalValue      float64
