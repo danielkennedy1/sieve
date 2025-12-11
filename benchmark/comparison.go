@@ -98,14 +98,11 @@ func RunComparison() {
 		genotypes = append(genotypes, g)
 	}
 
-	// 5a. Create Strategic Agents
 	for _, agent := range strategicTypes {
 		for i := 0; i < clonesPerType; i++ {
 			createAgent(agent.Name, agent.Strategy)
 		}
 	}
-
-	// 5b. Removed Noise Agent Creation
 
 	start := time.Now()
 	simulator.BeforeGeneration(&genotypes)
@@ -117,7 +114,6 @@ func RunComparison() {
 		return
 	}
 
-	// Aggregate Final Balances across all markets
 	for i, g := range genotypes {
 		totalFinalCash := 0.0
 		totalFinalHoldings := 0
@@ -153,7 +149,6 @@ func RunComparison() {
 		"Agent Type", "Count", "Avg Wealth", "Avg Cash", "Avg Holdings", "Avg Fit")
 	fmt.Println("--------------------------------------------------------------------------------------")
 
-	// Stats initialization and reporting loop, now excluding Noise
 	stats := make(map[string]*AgentStats)
 	allNames := []string{}
 	for _, a := range strategicTypes {
