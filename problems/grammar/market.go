@@ -17,11 +17,31 @@ import (
 )
 
 type MarketSimulator struct {
-	Results    []StrategyResult
-	Config     *MarketConfig
-	History    *MarketHistory
-	Rng        *rand.Rand
-	Generation int
+	Market          MarketState
+	Grammar         genomes.Grammar
+	MaxGenes        int
+	InitialFunds    float64
+	InitialHoldings int
+	RoundsPerGen    int
+	generation      int
+	Results         []StrategyResult
+	Config          *MarketConfig
+	History         *MarketHistory
+	Rng             *rand.Rand
+	Generation      int
+}
+
+func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings, roundsPerGen, maxGenes int) *MarketSimulator {
+	return &MarketSimulator{
+		Market:          NewMarketState(initialPrice),
+		History:         NewMarketHistory(),
+		Grammar:         grammar,
+		MaxGenes:        maxGenes,
+		InitialFunds:    initialFunds,
+		InitialHoldings: int(initialHoldings),
+		RoundsPerGen:    roundsPerGen,
+		generation:      0,
+	}
 }
 
 type StrategyResult struct {
@@ -158,7 +178,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 			}
 
 			for j := range marketStates[i].Participants {
-			    marketStates[i].Participants[j].Solvent = (marketStates[i].Participants[j].Funds + float64(marketStates[i].Participants[j].Holdings) * marketStates[i].Price) > 0
+				marketStates[i].Participants[j].Solvent = (marketStates[i].Participants[j].Funds + float64(marketStates[i].Participants[j].Holdings)*marketStates[i].Price) > 0
 			}
 
 			realOrders := make([]Order, len(marketStates[i].Participants))
@@ -185,7 +205,6 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 			noiseOrders := ms.generateNoiseOrders(ms.Config.NoiseOrdersPerRound)
 
 			orders := append(realOrders, noiseOrders...)
-
 
 			for j, o := range realOrders {
 				ms.executeOrder(&marketStates[i].Participants[j], o, marketStates[i])
@@ -216,7 +235,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 		})
 		for marketIdx := range ms.Config.SimsPerGeneration {
 			// If the strategy blows up the account in any market, bin it
-			if (!marketStates[marketIdx].Participants[genotypeId].Solvent) {
+			if !marketStates[marketIdx].Participants[genotypeId].Solvent {
 				results[genotypeId].ActiveReturn = math.Inf(-1)
 				break
 			}
@@ -339,7 +358,7 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 }
 
 func (ms *MarketSimulator) generateOrder(p Participant, s MarketState, progress float64) Order {
-	if (!p.Solvent) {
+	if !p.Solvent {
 		return Order{GenotypeID: p.Id, Action: "HOLD", Quantity: 0}
 	}
 	program, err := expr.Compile(p.Strategy)
