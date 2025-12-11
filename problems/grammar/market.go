@@ -311,12 +311,12 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 	ms.MarketStates = marketStates
 	ms.Results = results
 
-	//ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
-	//	Generation: ms.Generation,
-	//	FinalPrice: state.Price,
-	//	BuyOrders:  totalBuyVolume,
-	//	SellOrders: totalSellVolume,
-	//})
+	ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
+		Generation: ms.Generation,
+		FinalPrice: marketStates[0].Price,
+		BuyOrders:  totalBuyVolume,
+		SellOrders: totalSellVolume,
+	})
 
 	//ms.showChart(stateHistory)
 }
@@ -361,15 +361,15 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 		}
 	}
 
-	//avgFitness := 0.0
-	//if validCount > 0 {
-	//	avgFitness = totalFitness / float64(validCount)
-	//}
+	avgFitness := 0.0
+	if survivorCount > 0 {
+		avgFitness = totalFitness / float64(survivorCount)
+	}
 
-	//idx := len(ms.History.Generations) - 1
-	//ms.History.Generations[idx].AvgFitness = avgFitness
-	//ms.History.Generations[idx].BestFitness = bestFitness
-	//ms.History.Generations[idx].WorstFitness = worstFitness
+	idx := len(ms.History.Generations) - 1
+	ms.History.Generations[idx].AvgFitness = avgFitness
+	ms.History.Generations[idx].BestFitness = bestFitness
+	ms.History.Generations[idx].WorstFitness = worstFitness
 
 	//fmt.Printf("\t\tMarket Price: $%.2f, Fundamental Value: $%.2f, Best fitness: %.2f, Avg fitness: %.2f\n", ms.FinalState.Price, ms.FinalState.FundamentalValue, bestFitness, avgFitness)
 
