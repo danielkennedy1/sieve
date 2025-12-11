@@ -537,3 +537,37 @@ func (ms MarketSimulator) generateNoiseOrders(count int) []Order {
 	}
 	return orders
 }
+
+func MinPrice(prices []float64) float64 {
+	if len(prices) == 0 {
+		return 0
+	}
+	min := prices[0]
+	for _, p := range prices {
+		if p < min {
+			min = p
+		}
+	}
+	return min
+}
+
+func MaxPrice(prices []float64) float64 {
+	if len(prices) == 0 {
+		return 0
+	}
+	max := prices[0]
+	for _, p := range prices {
+		if p > max {
+			max = p
+		}
+	}
+	return max
+}
+
+func SumVolume(volumes []int) int {
+	sum := 0
+	for _, v := range volumes {
+		sum += v
+	}
+	return sum
+}
