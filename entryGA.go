@@ -16,7 +16,7 @@ import (
 	"github.com/danielkennedy1/sieve/problems/grammar"
 )
 
-def main() {
+func runGeneticAlgorithm() {
 	config, err := config.LoadConfig("market")
 
 	f, _ := os.Create("cpu.prof")

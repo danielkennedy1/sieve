@@ -23,15 +23,15 @@ type AgentStats struct {
 }
 
 func RunComparison() {
-	cfg, err := config.LoadConfig("market")
+	config, err := config.LoadConfig("market")
 	if err != nil {
 		fmt.Printf("Fatal error loading configuration: %v\n", err)
 		os.Exit(1)
 	}
 
-	f, err := os.Open(cfg.BNFFilePath)
+	f, err := os.Open(config.BNFFilePath)
 	if err != nil {
-		fmt.Printf("File not found: %s\n", cfg.BNFFilePath)
+		fmt.Printf("File not found: %s\n", config.BNFFilePath)
 		os.Exit(1)
 	}
 	defer f.Close()
@@ -39,19 +39,34 @@ func RunComparison() {
 	s := bufio.NewScanner(f)
 	gr := grammar.Parse(*s)
 	gr.BuildRuleMap()
+	r := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 100))
 
 	// 3. Initialize Simulator
-	simulator := grammar.NewMarketSimulator(
-		gr,
-		cfg.Market.InitialPrice,
-		cfg.Market.InitialFunds,
-		cfg.Market.InitialHoldings,
-		cfg.Market.RoundsPerGeneration,
-		cfg.MaxGenes,
-	)
+	simulator := &grammar.MarketSimulator{
+		Results: nil,
+		Config: &grammar.MarketConfig{
+			Grammar:                              gr,
+			MaxGenes:                             config.MaxGenes,
+			InitialPrice:                         config.Market.InitialPrice,
+			InitialFunds:                         config.Market.InitialFunds,
+			InitialHoldings:                      config.Market.InitialHoldings,
+			RoundsPerSim:                         config.Market.RoundsPerGeneration,
+			NoiseOrdersPerRound:                  config.Market.NoiseOrdersPerRound,
+			SimsPerGeneration:                    config.Market.SimsPerGeneration,
+			FundamentalValueChangesPerSimulation: config.Market.FundamentalValueChangesPerSimulation,
+			DemandPushCoefficient:                config.Market.DemandPushCoefficient,
+			FundamentalPullCoefficient:           config.Market.FundamentalPullCoefficient,
+			RSIPeriod:                            config.Market.RSIPeriod,
+			ATRPeriod:                            config.Market.ATRPeriod,
+			SMAPeriod:                            config.Market.SMAPeriod,
+		},
+		History:    &grammar.MarketHistory{},
+		Rng:        r,
+		Generation: 0,
+	}
 
 	// 4. Define Strategic Agent Types (The 10%)
-	bestGAStrategy := `($PRICE <= 100) ? "BUY 1.0" : ( ($PRICE >= 100) ? "SELL 1.0" : "HOLD" )`
+	bestGAStrategy := `( ( $PRICE / $FUNDAMENTAL ) > 1.1 ) ? ( " SELL 9 " ) : ( ( $PRICE > $PRICE ) ? ( " BUY 6 " ) : ( " HOLD " ) )`
 
 	strategicTypes := []struct {
 		Name     string
@@ -77,12 +92,11 @@ func RunComparison() {
 	numNoise := totalAgents - numStrategic
 
 	fmt.Println("\n=== Starting Comparison Benchmark ===")
-	fmt.Printf("Market Rounds: %d\n", cfg.Market.RoundsPerGeneration)
-	fmt.Printf("Initial Funds: $%.2f\n", cfg.Market.InitialFunds)
+	fmt.Printf("Market Rounds: %d\n", config.Market.RoundsPerGeneration)
+	fmt.Printf("Initial Funds: $%.2f\n", config.Market.InitialFunds)
 	fmt.Printf("Population Split: %d Strategic (10%%) / %d Noise (90%%) = %d Total\n", numStrategic, numNoise, totalAgents)
 
 	// Create a shared random source for the simulation
-	r := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 100))
 
 	var genotypes []genomes.Genotype
 
@@ -91,8 +105,8 @@ func RunComparison() {
 		g := genomes.NewCreateGenotype(1, r, make(map[string]any))()
 		g.Attributes["HardcodedStrategy"] = strategy
 		g.Attributes["AgentType"] = name
-		g.Attributes["cash"] = cfg.Market.InitialFunds
-		g.Attributes["holdings"] = cfg.Market.InitialHoldings
+		g.Attributes["cash"] = config.Market.InitialFunds
+		g.Attributes["holdings"] = config.Market.InitialHoldings
 		genotypes = append(genotypes, g)
 	}
 
@@ -161,22 +175,20 @@ func RunComparison() {
 	fmt.Printf("\n=== Results (Sim Time: %s) ===\n", elapsed)
 	fmt.Printf("Final Market Price: $%.2f (Change: %.2f%%)\n",
 		simulator.Market.CurrentPrice,
-		((simulator.Market.CurrentPrice-cfg.Market.InitialPrice)/cfg.Market.InitialPrice)*100,
+		((simulator.Market.CurrentPrice-config.Market.InitialPrice)/config.Market.InitialPrice)*100,
 	)
 	fmt.Println("--------------------------------------------------------------------------------------")
 	fmt.Printf("%-15s | %-6s | %-14s | %-12s | %-14s | %-8s\n",
 		"Agent Type", "Count", "Avg Wealth", "Avg Cash", "Avg Holdings", "Avg Fit")
 	fmt.Println("--------------------------------------------------------------------------------------")
 
-	// Sort names to keep table consistent (Noise usually at bottom or specific order)
-	// We reuse the order defined in 'allNames' which puts Noise last
-
 	for _, name := range allNames {
 		s := stats[name]
 		if s.Count == 0 {
 			continue
 		}
-
+		// DEBUG
+		fmt.Printf("%s TotalWealth: %f\n", s.Name, s.TotalWealth)
 		avgWealth := s.TotalWealth / float64(s.Count)
 		avgCash := s.TotalCash / float64(s.Count)
 		avgHoldings := float64(s.TotalStock) / float64(s.Count)

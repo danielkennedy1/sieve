@@ -31,7 +31,7 @@ type MarketSimulator struct {
 	Generation      int
 }
 
-func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings, roundsPerGen, maxGenes int) *MarketSimulator {
+func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings, roundsPerGen, maxGenes int, rng *rand.Rand) *MarketSimulator {
 	return &MarketSimulator{
 		Market:          *NewMarketState(initialPrice),
 		History:         NewMarketHistory(),
@@ -41,6 +41,7 @@ func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds floa
 		InitialHoldings: int(initialHoldings),
 		RoundsPerGen:    roundsPerGen,
 		generation:      0,
+		Rng:             rng,
 	}
 }
 
@@ -400,6 +401,7 @@ func (ms *MarketSimulator) generateOrder(p Participant, s MarketState, progress 
 		"$ATR":         s.AverageTrueRange,
 		"$SMA":         s.SimpleMovingAverage,
 		"$FUNDAMENTAL": s.FundamentalValue,
+		"$RANDOM":      ms.Rng.Float64(),
 	})
 
 	if err != nil {
