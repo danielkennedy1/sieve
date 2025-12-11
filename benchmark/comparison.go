@@ -23,7 +23,7 @@ type AgentStats struct {
 }
 
 func RunComparison() {
-	config, err := config.LoadConfig("market")
+	config, err := config.LoadConfig("compare")
 	if err != nil {
 		fmt.Printf("Fatal error loading configuration: %v\n", err)
 		os.Exit(1)
@@ -64,13 +64,13 @@ func RunComparison() {
 		Generation: 0,
 	}
 
-	bestGAStrategy := `( ( $PRICE / $FUNDAMENTAL ) > 1.1 ) ? ( " SELL 9 " ) : ( ( $PRICE > $PRICE ) ? ( " BUY 6 " ) : ( " HOLD " ) )`
+	bestStrategy := config.BestStrategy
 
 	strategicTypes := []struct {
 		Name     string
 		Strategy string
 	}{
-		{Name: "Best GA", Strategy: bestGAStrategy},
+		{Name: "Best GA", Strategy: bestStrategy},
 		{Name: "Buy & Hold", Strategy: `(true) ? "BUY 5" : "SELL 0"`},
 		{Name: "Simple", Strategy: `($PRICE <= 110) ? "BUY 5" : "SELL 5"`},
 		{Name: "Random", Strategy: `($RANDOM >= 0.5) ? "BUY 1" : "SELL 1"`},
