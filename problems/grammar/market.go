@@ -68,6 +68,7 @@ type StrategyResult struct {
 	Id           int
 	Strategy     string
 	ActiveReturn float64
+	SharpeRatio  float64
 }
 
 type MarketState struct {
@@ -85,12 +86,13 @@ type MarketState struct {
 }
 
 type Participant struct {
-	Id                 int
-	Strategy           string
-	Funds              float64
-	Holdings           int
-	ExecutedTradeCount int
-	Solvent            bool
+	Id                    int
+	Strategy              string
+	Funds                 float64
+	Holdings              int
+	ExecutedTradeCount    int
+	Solvent               bool
+	PortfolioValueHistory []float64
 }
 
 type MarketConfig struct {
@@ -98,6 +100,7 @@ type MarketConfig struct {
 	MaxGenes                             int
 	InitialPrice                         float64
 	InitialFunds                         float64
+	RiskFreeRate                         float64
 	InitialHoldings                      int
 	RoundsPerSim                         int
 	NoiseOrdersPerRound                  int
@@ -247,7 +250,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 			// Calculate the new price based on ALL orders (real participants + extra noise)
 			newPrice := calculateNewPrice(
 				marketStates[i].Price,
-				realOrders,
+				orders,
 				marketStates[i].FundamentalValue,
 				ms.Config.DemandPushCoefficient,
 				ms.Config.FundamentalPullCoefficient,
@@ -259,11 +262,8 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 				ms.executeOrder(&marketStates[i].Participants[j], o, marketStates[i])
 			}
 
-			marketStates[i].Price = calculateNewPrice(marketStates[i].Price, orders, marketStates[i].FundamentalValue, ms.Config.DemandPushCoefficient, ms.Config.FundamentalPullCoefficient)
-			marketStates[i].Price = newPrice
-
-			for j, o := range realOrders {
-				ms.executeOrder(&marketStates[i].Participants[j], o, marketStates[i])
+			for j := range marketStates[i].Participants {
+				ms.trackPortfolioValue(&marketStates[i].Participants[j], marketStates[i].Price)
 			}
 
 			marketStates[i].PriceHistory = append(marketStates[i].PriceHistory, marketStates[i].Price)
@@ -285,10 +285,13 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 	results := []StrategyResult{}
 
 	for genotypeId := range *genotypes {
+
+		totalSharpe := 0.0
 		results = append(results, StrategyResult{
 			Id:           genotypeId,
 			Strategy:     marketStates[0].Participants[genotypeId].Strategy,
 			ActiveReturn: 0,
+			SharpeRatio:  0,
 		})
 		for marketIdx := range ms.Config.SimsPerGeneration {
 			// If the strategy blows up the account in any market, bin it
@@ -296,11 +299,14 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 				results[genotypeId].ActiveReturn = math.Inf(-1)
 				break
 			}
-
+			sharpe := calculateSharpeRatio(marketStates[marketIdx].Participants[genotypeId].PortfolioValueHistory, ms.Config.RiskFreeRate)
 			portfolioValue := marketStates[marketIdx].Participants[genotypeId].Funds + float64(marketStates[marketIdx].Participants[genotypeId].Holdings)*marketStates[marketIdx].Price
 			passivePortfolioValue := ms.Config.InitialFunds + float64(ms.Config.InitialHoldings)*marketStates[marketIdx].Price
+			// sharpeMultiplier := math.Max(0, math.Min(sharpe, 3.0))
 			results[genotypeId].ActiveReturn += portfolioValue - passivePortfolioValue
+			totalSharpe += sharpe
 		}
+		results[genotypeId].SharpeRatio = totalSharpe / float64(ms.Config.SimsPerGeneration)
 	}
 	ms.MarketStates = marketStates
 	ms.Results = results
@@ -376,6 +382,16 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 
 	// Histogram
 	numBins := 20
+
+	// --- Add Check Here ---
+	if bestFitness == worstFitness {
+		tm.Println("Skipping histogram: all individuals have the same fitness.")
+		tm.Flush()
+		ms.Generation++
+		return
+	}
+	// ----------------------
+
 	binWidth := (bestFitness - worstFitness) / float64(numBins)
 	bins := make([]int, numBins)
 
@@ -409,6 +425,17 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 	}
 
 	tm.Println(histogram.Draw(histogramData))
+
+	// print price graph
+	priceChart := tm.NewLineChart(100, 20)
+	priceData := new(tm.DataTable)
+	priceData.AddColumn("Round")
+	priceData.AddColumn("Price")
+
+	for i := range ms.History.Prices {
+		priceData.AddRow(float64(i), ms.History.Prices[i])
+	}
+	tm.Println(priceChart.Draw(priceData))
 	tm.Flush()
 
 	ms.Generation++
@@ -479,9 +506,10 @@ func calculateNewPrice(price float64, orders []Order, fundamentalValue, demandPu
 	sellVolume := 0
 
 	for _, o := range orders {
-		if o.Action == "BUY" {
+		switch o.Action {
+		case "BUY":
 			buyVolume += o.Quantity
-		} else if o.Action == "SELL" {
+		case "SELL":
 			sellVolume += o.Quantity
 		}
 	}
@@ -606,4 +634,53 @@ func SumVolume(volumes []int) int {
 		sum += v
 	}
 	return sum
+}
+
+func calculateSharpeRatio(returns []float64, riskFreeRate float64) float64 {
+	if len(returns) < 2 {
+		return 0.0
+	}
+
+	excessReturns := make([]float64, len(returns))
+	for i, r := range returns {
+		excessReturns[i] = r - riskFreeRate
+	}
+
+	sum := 0.0
+	for _, r := range excessReturns {
+		sum += r
+	}
+	meanExcessReturn := sum / float64(len(excessReturns))
+
+	varianceSum := 0.0
+	for _, r := range excessReturns {
+		diff := r - meanExcessReturn
+		varianceSum += diff * diff
+	}
+	stdDev := math.Sqrt(varianceSum / float64(len(excessReturns)))
+
+	if stdDev == 0 {
+		return 0.0
+	}
+
+	return meanExcessReturn / stdDev
+}
+
+func calculateReturns(portfolioValues []float64) []float64 {
+	if len(portfolioValues) < 2 {
+		return []float64{}
+	}
+
+	returns := make([]float64, len(portfolioValues)-1)
+	for i := 1; i < len(portfolioValues); i++ {
+		if portfolioValues[i-1] != 0 {
+			returns[i-1] = (portfolioValues[i] - portfolioValues[i-1]) / portfolioValues[i-1]
+		}
+	}
+	return returns
+}
+
+func (ms *MarketSimulator) trackPortfolioValue(participant *Participant, currentPrice float64) {
+	portfolioValue := participant.Funds + float64(participant.Holdings)*currentPrice
+	participant.PortfolioValueHistory = append(participant.PortfolioValueHistory, portfolioValue)
 }

@@ -20,6 +20,7 @@ type AgentStats struct {
 	TotalStock  int
 	TotalWealth float64
 	TotalFit    float64
+	TotalSharpe float64
 }
 
 func RunComparison() {
@@ -144,10 +145,10 @@ func RunComparison() {
 		reportingFinalPrice,
 		((reportingFinalPrice-config.Market.InitialPrice)/config.Market.InitialPrice)*100,
 	)
-	fmt.Println("--------------------------------------------------------------------------------------")
-	fmt.Printf("%-15s | %-6s | %-14s | %-12s | %-14s | %-8s\n",
-		"Agent Type", "Count", "Avg Wealth", "Avg Cash", "Avg Holdings", "Avg Fit")
-	fmt.Println("--------------------------------------------------------------------------------------")
+	fmt.Println("-------------------------------------------------------------------------------------------------------")
+	fmt.Printf("%-15s | %-6s | %-14s | %-12s | %-14s | %-11s | %-8s\n",
+		"Agent Type", "Count", "Avg Wealth", "Avg Cash", "Avg Holdings", "Avg Fit", "Avg Sharpe")
+	fmt.Println("-------------------------------------------------------------------------------------------------------")
 
 	stats := make(map[string]*AgentStats)
 	allNames := []string{}
@@ -180,6 +181,15 @@ func RunComparison() {
 		if !math.IsNaN(fitness) && !math.IsInf(fitness, 0) {
 			s.TotalFit += fitness
 		}
+
+		// Add Sharpe ratio calculation
+		if idAny, ok := g.Attributes["id"]; ok {
+			id := idAny.(int)
+			sharpe := simulator.Results[id].SharpeRatio
+			if !math.IsNaN(sharpe) && !math.IsInf(sharpe, 0) {
+				s.TotalSharpe += sharpe
+			}
+		}
 	}
 
 	for _, name := range allNames {
@@ -192,12 +202,12 @@ func RunComparison() {
 		avgCash := s.TotalCash / float64(s.Count)
 		avgHoldings := float64(s.TotalStock) / float64(s.Count)
 		avgFit := s.TotalFit / float64(s.Count)
+		avgSharpe := s.TotalSharpe / float64(s.Count)
 
-		fmt.Printf("%-15s | %-6d | $%-13.2f | $%-11.2f | %-14.1f | %.4f\n",
-			s.Name, s.Count, avgWealth, avgCash, avgHoldings, avgFit)
+		fmt.Printf("%-15s | %-6d | $%-13.2f | $%-11.2f | %-14.1f | %-11.4f | %-11.4f |\n",
+			s.Name, s.Count, avgWealth, avgCash, avgHoldings, avgFit, avgSharpe)
 	}
-	fmt.Println("--------------------------------------------------------------------------------------")
-
+	fmt.Println("-------------------------------------------------------------------------------------------------------")
 	simulator.History.ExportJSON("comparison_history.json")
 	fmt.Println("\nHistory exported to comparison_history.json")
 }
