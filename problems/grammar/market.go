@@ -29,6 +29,7 @@ type MarketSimulator struct {
 	History         *MarketHistory
 	Rng             *rand.Rand
 	Generation      int
+	MarketStates    []MarketState
 }
 
 func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings, roundsPerGen, maxGenes int, rng *rand.Rand) *MarketSimulator {
@@ -169,6 +170,8 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 		SimpleMovingAverage:   ms.Config.InitialPrice,
 		AverageTrueRange:      0.0,
 		Participants:          make([]Participant, len(*genotypes)),
+		PriceHistory:          []float64{ms.Config.InitialPrice},
+		VolumeHistory:         []int{0},
 	}
 
 	for i, g := range *genotypes {
@@ -187,9 +190,21 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 	}
 
 	for range ms.Config.SimsPerGeneration {
-		state := initialState
-		state.Participants = make([]Participant, len(*genotypes))
+		state := MarketState{
+			Price:                 initialState.Price,
+			Volume:                initialState.Volume,
+			FundamentalValue:      initialState.FundamentalValue,
+			RelativeStrengthIndex: initialState.RelativeStrengthIndex,
+			SimpleMovingAverage:   initialState.SimpleMovingAverage,
+			AverageTrueRange:      initialState.AverageTrueRange,
+			PriceHistory:          make([]float64, len(initialState.PriceHistory)),
+			VolumeHistory:         make([]int, len(initialState.VolumeHistory)),
+			Participants:          make([]Participant, len(initialState.Participants)),
+		}
+		copy(state.PriceHistory, initialState.PriceHistory)
+		copy(state.VolumeHistory, initialState.VolumeHistory)
 		copy(state.Participants, initialState.Participants)
+
 		marketStates = append(marketStates, state)
 	}
 
@@ -229,22 +244,41 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 
 			orders := append(realOrders, noiseOrders...)
 
+			// 1. Calculate the new price based on ALL orders (real participants + extra noise)
+			newPrice := calculateNewPrice(
+				marketStates[i].Price,
+				realOrders,
+				marketStates[i].FundamentalValue,
+				ms.Config.DemandPushCoefficient,
+				ms.Config.FundamentalPullCoefficient,
+			)
+
+			marketStates[i].Price = newPrice
+
 			for j, o := range realOrders {
 				ms.executeOrder(&marketStates[i].Participants[j], o, marketStates[i])
 			}
 
 			marketStates[i].Price = calculateNewPrice(marketStates[i].Price, orders, marketStates[i].FundamentalValue, ms.Config.DemandPushCoefficient, ms.Config.FundamentalPullCoefficient)
+			marketStates[i].Price = newPrice
 
-			priceHistory := make([]float64, round+1)
+			for j, o := range realOrders {
+				ms.executeOrder(&marketStates[i].Participants[j], o, marketStates[i])
+			}
 
-			marketStates[i].RelativeStrengthIndex = relativeStrengthIndex(priceHistory, ms.Config.RSIPeriod)
+			marketStates[i].PriceHistory = append(marketStates[i].PriceHistory, marketStates[i].Price)
+			currentHistory := marketStates[i].PriceHistory
+
+			marketStates[i].RelativeStrengthIndex = relativeStrengthIndex(currentHistory, ms.Config.RSIPeriod)
 			marketStates[i].Volume = buyVolume + sellVolume
-			marketStates[i].AverageTrueRange = averageTrueRange(priceHistory, ms.Config.ATRPeriod)
-			marketStates[i].SimpleMovingAverage = simpleMovingAverage(priceHistory, ms.Config.SMAPeriod)
+			marketStates[i].AverageTrueRange = averageTrueRange(currentHistory, ms.Config.ATRPeriod)
+			marketStates[i].SimpleMovingAverage = simpleMovingAverage(currentHistory, ms.Config.SMAPeriod)
 
-			ms.History.Timestamps = append(ms.History.Timestamps, ms.Generation*ms.Config.RoundsPerSim+round)
-			ms.History.Prices = append(ms.History.Prices, priceHistory...)
-			ms.History.Volumes = append(ms.History.Volumes, buyVolume+sellVolume)
+			if i == 0 {
+				ms.History.Timestamps = append(ms.History.Timestamps, ms.Generation*ms.Config.RoundsPerSim+round)
+				ms.History.Prices = append(ms.History.Prices, marketStates[i].Price)
+				ms.History.Volumes = append(ms.History.Volumes, buyVolume+sellVolume)
+			}
 		}
 	}
 
@@ -268,7 +302,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 			results[genotypeId].ActiveReturn += portfolioValue - passivePortfolioValue
 		}
 	}
-
+	ms.MarketStates = marketStates
 	ms.Results = results
 
 	//ms.History.Generations = append(ms.History.Generations, GenerationSnapshot{
