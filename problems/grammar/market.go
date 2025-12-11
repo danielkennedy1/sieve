@@ -244,7 +244,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 
 			orders := append(realOrders, noiseOrders...)
 
-			// 1. Calculate the new price based on ALL orders (real participants + extra noise)
+			// Calculate the new price based on ALL orders (real participants + extra noise)
 			newPrice := calculateNewPrice(
 				marketStates[i].Price,
 				realOrders,

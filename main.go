@@ -27,7 +27,7 @@ func main() {
 		return
 
 	case *runGA:
-		runGeneticAlgorithm()
+		runMarketGE()
 		return
 
 	case *runCompare:
