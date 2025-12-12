@@ -2,7 +2,7 @@ generations = 50
 
 max_genes = 200
 
-bnf_file_path = "data/market.bnf"
+bnf_file_path = "data/sensible_market.bnf"
 
 [market]
 initial_funds = 1500.0
