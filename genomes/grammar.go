@@ -5,7 +5,6 @@ import (
 	"math/rand/v2"
 	"sort"
 	"strings"
-	"time"
 )
 
 type Grammar struct {
@@ -218,16 +217,15 @@ func (g Genotype) CrossoverGenotype(g2 Genotype, rng *rand.Rand) (Genotype, Geno
 }
 
 func NewMutateGenotype(rng *rand.Rand, perGeneMutationRate float64) func(g Genotype) Genotype {
-	return func(g Genotype) Genotype {
-		rng := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0))
-		clone := cloneG(g)
-		if rng.Float64() < perGeneMutationRate {
-			for i := 0; i < len(clone.Genes); i++ {
-				clone.Genes[i] = uint8(rng.IntN(256))
-			}
-		}
-		return clone
-	}
+    return func(g Genotype) Genotype {
+        clone := cloneG(g)
+        for i := range clone.Genes {
+            if rng.Float64() < perGeneMutationRate {
+                clone.Genes[i] = uint8(rng.IntN(256))
+            }
+        }
+        return clone
+    }
 }
 
 func ExtractInputVariables(gr Grammar) []string {
