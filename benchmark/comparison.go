@@ -198,6 +198,10 @@ func RunComparison() {
 			continue
 		}
 
+		if name == "Buy & Hold" {
+			s.TotalStock = int(math.Abs(float64(s.TotalStock)))
+		}
+
 		avgWealth := s.TotalWealth / float64(s.Count)
 		avgCash := s.TotalCash / float64(s.Count)
 		avgHoldings := float64(s.TotalStock) / float64(s.Count)
