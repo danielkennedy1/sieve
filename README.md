@@ -1,9 +1,10 @@
 # Sieve
-LK315 Immersive Software Engineering
+LK315 MSc Immersive Software Engineering
 
 CS6425 Software Meets World - Evolutionary Algorithims
 
 22340017 Daniel Kennedy
+
 22343288 Dominick Stephens
 
 Instructor: Dr. James Patten
