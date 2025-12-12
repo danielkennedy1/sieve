@@ -40,13 +40,13 @@ func RunComparison() {
 	s := bufio.NewScanner(f)
 	gr := grammar.Parse(*s)
 	gr.BuildRuleMap()
-	r := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 100))
+	r := rand.New(rand.NewPCG(5, 5))
 
 	simulator := &grammar.MarketSimulator{
 		Results: nil,
 		Config: &grammar.MarketConfig{
 			Grammar:                              gr,
-			MaxGenes:                             config.MaxGenes,
+			MaxReproductions:                     config.MaxReproductions,
 			InitialPrice:                         config.Market.InitialPrice,
 			InitialFunds:                         config.Market.InitialFunds,
 			InitialHoldings:                      config.Market.InitialHoldings,
@@ -71,13 +71,13 @@ func RunComparison() {
 		Name     string
 		Strategy string
 	}{
-		{Name: "Best GA", Strategy: bestStrategy},
-		{Name: "Buy & Hold", Strategy: `(true) ? "BUY 5" : "SELL 0"`},
-		{Name: "Simple", Strategy: `($PRICE <= 110) ? "BUY 5" : "SELL 5"`},
-		{Name: "Random", Strategy: `($RANDOM >= 0.5) ? "BUY 1" : "SELL 1"`},
+		{Name: "Best GE", Strategy: bestStrategy},
+		{Name: "Buy & Hold", Strategy: `(true) ? "BUY 1" : "SELL 0"`},
+		{Name: "Simple", Strategy: `( ( $RSI  >= 70 ) ? ( "SELL 0.5" ) : ( ( $RSI < 30 ) ? ( "BUY 0.5" ) : ( "HOLD" ) ) )`},
+		{Name: "Random", Strategy: `( ( $RANDOM  >= 0.66 ) ? ( "SELL 1" ) : ( ( $RANDOM < 0.33 ) ? ( "BUY 1" ) : ( "HOLD" ) ) )`},
 	}
 
-	clonesPerType := 5
+	clonesPerType := 10
 	numStrategic := len(strategicTypes) * clonesPerType
 
 	numNoise := config.Market.NoiseOrdersPerRound
