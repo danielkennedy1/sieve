@@ -2,16 +2,16 @@ generations = 50
 
 max_genes = 200
 
-bnf_file_path = "data/sensible_market.bnf"
+bnf_file_path = "data/market.bnf"
 
 [market]
 initial_funds = 1500.0
 initial_price = 100.0
 initial_holdings = 15
-rounds_per_generation = 30
+rounds_per_generation = 100
 noise_orders_per_round = 800
-sims_per_generation = 20
-fundamental_value_changes_per_simulation = 1
+sims_per_generation = 30
+fundamental_value_changes_per_simulation = 5
 demand_push_coefficient = 0.2
 fundamental_pull_coefficient = 0.01 
 rsi_period = 14
@@ -20,11 +20,11 @@ sma_period = 14
 
 # Population Settings
 [population]
-size = 100
-mutation_rate = 0.1
+size = 500
+mutation_rate = 0.05
 crossover_rate = 0.6
 max_depth = 20
 gene_length = 100
 tournament_size = 7
-elite_count = 20
+elite_count = 50
 cache_boolean = false
