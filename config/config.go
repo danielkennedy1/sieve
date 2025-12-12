@@ -48,7 +48,7 @@ type Config struct {
 
 	// Fitness Settings (Top level)
 	ParsiomonyPenalty float64 `mapstructure:"parsimony_penalty"`
-	MaxGenes          int     `mapstructure:"max_genes"`
+	MaxReproductions  int     `mapstructure:"max_reproductions"`
 
 	// General Settings (Top level)
 	BNFFilePath string `mapstructure:"bnf_file_path"`

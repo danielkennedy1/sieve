@@ -76,7 +76,7 @@ func runMarketGE() {
 		Results: nil,
 		Config: &grammar.MarketConfig{
 			Grammar:                              gr,
-			MaxGenes:                             config.MaxGenes,
+			MaxReproductions:                     config.MaxReproductions,
 			InitialPrice:                         config.Market.InitialPrice,
 			InitialFunds:                         config.Market.InitialFunds,
 			InitialHoldings:                      config.Market.InitialHoldings,

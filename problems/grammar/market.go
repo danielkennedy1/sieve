@@ -18,32 +18,32 @@ import (
 )
 
 type MarketSimulator struct {
-	Market          MarketState
-	Grammar         genomes.Grammar
-	MaxGenes        int
-	InitialFunds    float64
-	InitialHoldings int
-	RoundsPerGen    int
-	generation      int
-	Results         []StrategyResult
-	Config          *MarketConfig
-	History         *MarketHistory
-	Rng             *rand.Rand
-	Generation      int
-	MarketStates    []MarketState
+	Market           MarketState
+	Grammar          genomes.Grammar
+	MaxReproductions int
+	InitialFunds     float64
+	InitialHoldings  int
+	RoundsPerGen     int
+	generation       int
+	Results          []StrategyResult
+	Config           *MarketConfig
+	History          *MarketHistory
+	Rng              *rand.Rand
+	Generation       int
+	MarketStates     []MarketState
 }
 
-func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings, roundsPerGen, maxGenes int, rng *rand.Rand) *MarketSimulator {
+func NewMarketSimulator(grammar genomes.Grammar, initialPrice, initialFunds float64, initialHoldings, roundsPerGen, maxReproductions int, rng *rand.Rand) *MarketSimulator {
 	return &MarketSimulator{
-		Market:          *NewMarketState(initialPrice),
-		History:         NewMarketHistory(),
-		Grammar:         grammar,
-		MaxGenes:        maxGenes,
-		InitialFunds:    initialFunds,
-		InitialHoldings: int(initialHoldings),
-		RoundsPerGen:    roundsPerGen,
-		generation:      0,
-		Rng:             rng,
+		Market:           *NewMarketState(initialPrice),
+		History:          NewMarketHistory(),
+		Grammar:          grammar,
+		MaxReproductions: maxReproductions,
+		InitialFunds:     initialFunds,
+		InitialHoldings:  int(initialHoldings),
+		RoundsPerGen:     roundsPerGen,
+		generation:       0,
+		Rng:              rng,
 	}
 }
 
@@ -98,7 +98,7 @@ type Participant struct {
 
 type MarketConfig struct {
 	Grammar                              genomes.Grammar
-	MaxGenes                             int
+	MaxReproductions                     int
 	InitialPrice                         float64
 	InitialFunds                         float64
 	RiskFreeRate                         float64
@@ -186,7 +186,7 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 
 		initialState.Participants[i] = Participant{
 			Id:                 i,
-			Strategy:           g.MapToGrammar(ms.Config.Grammar, ms.Config.MaxGenes).String(),
+			Strategy:           g.MapToGrammar(ms.Config.Grammar, ms.Config.MaxReproductions).String(),
 			Funds:              ms.Config.InitialFunds,
 			Holdings:           ms.Config.InitialHoldings,
 			ExecutedTradeCount: 0,
@@ -272,9 +272,9 @@ func (ms *MarketSimulator) BeforeGeneration(genotypes *[]genomes.Genotype) {
 				for j, o := range realOrders {
 					ms.executeOrder(&marketStates[marketIdx].Participants[j], o, marketStates[marketIdx])
 				}
-			for j := range marketStates[i].Participants {
-				ms.trackPortfolioValue(&marketStates[i].Participants[j], marketStates[i].Price)
-			}
+				for j := range marketStates[i].Participants {
+					ms.trackPortfolioValue(&marketStates[i].Participants[j], marketStates[i].Price)
+				}
 
 				marketStates[marketIdx].PriceHistory = append(marketStates[marketIdx].PriceHistory, marketStates[marketIdx].Price)
 				currentHistory := marketStates[marketIdx].PriceHistory
@@ -391,7 +391,6 @@ func (ms *MarketSimulator) AfterGeneration(fitnesses []float64) {
 	fmt.Println("Fitness: ", bestFitness)
 
 	slices.Sort(fitnesses)
-
 
 	histogram := tm.NewLineChart(100, 20)
 	histogramData := new(tm.DataTable)

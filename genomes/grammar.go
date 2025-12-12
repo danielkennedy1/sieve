@@ -140,7 +140,7 @@ func (gr Grammar) getTerminatingProductionIndex(rule *Rule) int {
 	return bestIndex
 }
 
-func expand(gr Grammar, g Genotype, token string, offset *int, maxGenes int) *GrammarNode {
+func expand(gr Grammar, g Genotype, token string, offset *int, maxReproductions int) *GrammarNode {
 	rule := gr.getRule(token)
 	if rule == nil {
 		return &GrammarNode{
@@ -151,7 +151,7 @@ func expand(gr Grammar, g Genotype, token string, offset *int, maxGenes int) *Gr
 
 	var production Production
 
-	if *offset >= maxGenes {
+	if *offset >= maxReproductions {
 		bestIdx := gr.getTerminatingProductionIndex(rule)
 		production = rule.Productions[bestIdx]
 	} else {
@@ -165,7 +165,7 @@ func expand(gr Grammar, g Genotype, token string, offset *int, maxGenes int) *Gr
 
 	var children []*GrammarNode
 	for _, e := range production.Elements {
-		children = append(children, expand(gr, g, e, offset, maxGenes))
+		children = append(children, expand(gr, g, e, offset, maxReproductions))
 	}
 
 	return &GrammarNode{
@@ -174,9 +174,9 @@ func expand(gr Grammar, g Genotype, token string, offset *int, maxGenes int) *Gr
 	}
 }
 
-func (g Genotype) MapToGrammar(gr Grammar, maxGenes int) GrammarNode {
+func (g Genotype) MapToGrammar(gr Grammar, maxReproductions int) GrammarNode {
 	offset := -1
-	root := expand(gr, g, gr.Rules[0].Left, &offset, maxGenes)
+	root := expand(gr, g, gr.Rules[0].Left, &offset, maxReproductions)
 	return *root
 }
 
@@ -217,15 +217,15 @@ func (g Genotype) CrossoverGenotype(g2 Genotype, rng *rand.Rand) (Genotype, Geno
 }
 
 func NewMutateGenotype(rng *rand.Rand, perGeneMutationRate float64) func(g Genotype) Genotype {
-    return func(g Genotype) Genotype {
-        clone := cloneG(g)
-        for i := range clone.Genes {
-            if rng.Float64() < perGeneMutationRate {
-                clone.Genes[i] = uint8(rng.IntN(256))
-            }
-        }
-        return clone
-    }
+	return func(g Genotype) Genotype {
+		clone := cloneG(g)
+		for i := range clone.Genes {
+			if rng.Float64() < perGeneMutationRate {
+				clone.Genes[i] = uint8(rng.IntN(256))
+			}
+		}
+		return clone
+	}
 }
 
 func ExtractInputVariables(gr Grammar) []string {
